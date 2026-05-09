@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
+import { RouterProvider, createBrowserRouter, Outlet, Link, useLocation } from 'react-router-dom'
 import { EntityProvider, useEntity } from './context/EntityContext'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
@@ -58,18 +58,45 @@ function Navigation() {
   )
 }
 
+// Layout component wrapping all routes
+function Layout() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Navigation />
+      <Outlet />
+    </div>
+  )
+}
+
+// Router configuration with v7 future flags
+const router = createBrowserRouter(
+  [
+    {
+      element: <Layout />,
+      children: [
+        {
+          path: '/',
+          element: <Dashboard />,
+        },
+        {
+          path: '/geo',
+          element: <GeoAnalysis />,
+        },
+      ],
+    },
+  ],
+  {
+    future: {
+      v7_startTransition: true,
+      v7_relativeSplatPath: true,
+    },
+  }
+)
+
 function App() {
   return (
     <EntityProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Navigation />
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/geo" element={<GeoAnalysis />} />
-          </Routes>
-        </div>
-      </Router>
+      <RouterProvider router={router} />
     </EntityProvider>
   )
 }
