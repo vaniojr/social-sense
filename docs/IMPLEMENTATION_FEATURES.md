@@ -118,52 +118,93 @@ function aggregateByRegion(scores) {
 
 #### 1.4 Frontend Components
 
-**Component 1: Brazil Heat Map**
-```tsx
-import { ComposedChart } from 'recharts';
+**Component 1: Brazil Interactive Choropleth Map (Leaflet + OpenStreetMap)**
 
-export function BrazilSentimentMap({ regionalData }) {
-  // Render interactive Brazil map with color gradient
-  // Color: red (negative sentiment) to green (positive)
+**Status:** ✅ IMPLEMENTADO (Phase 2 MVP)
+
+**Biblioteca:** react-leaflet v4 + leaflet + OpenStreetMap tiles
+
+**Arquivo:** `src/frontend/src/components/BrazilMap.tsx`
+
+**Funcionalidades:**
+- Mapa geográfico interativo com OpenStreetMap como base
+- GeoJSON dos 27 estados brasileiros (IBGE dataset)
+- Choropleth: cada estado colorido por sentimento (-1 vermelho → +1 verde)
+- Escala de cores: 5 níveis (muito negativo → muito positivo)
+- Interatividade:
+  - **Hover:** destaca estado com borda azul
+  - **Click:** seleciona estado, mostra painel de detalhes
+  - **Popup:** tooltip com sentimento, volume de menções, temas
+- Zoom e pan para navegação do mapa
+- Legenda visual integrada
+
+```tsx
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import L from 'leaflet';
+
+export function BrazilMap({ states, onStateClick, selectedState }) {
+  // Renderiza mapa com MapContainer
+  // Carrega GeoJSON de https://raw.githubusercontent.com/fititnt/gis-dataset-brasil/master/uf/geojson/uf.json
+  // Colors states based on sentiment score
+  // Height: 500px, Zoom: 4, Centered on Brazil [-10.3, -55.5]
   
   return (
-    <div className="w-full h-96">
-      <BrazilMap
-        data={regionalData}
-        colorScale={(-1, +1)} // red to green
-        onClick={(state) => onStateSelected(state)}
+    <MapContainer center={[-10.3, -55.5]} zoom={4} style={{ width: '100%', height: '500px' }}>
+      <TileLayer
+        attribution='&copy; OpenStreetMap contributors'
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
-    </div>
+      <GeoJSON data={geoJsonData} style={style} onEachFeature={onEachFeature} />
+    </MapContainer>
   );
 }
 ```
 
+**Dependências:**
+- `react-leaflet@^4.0.0`
+- `leaflet@^1.9.0`
+- PostCSS + Tailwind CSS (para styling)
+
+**Performance:**
+- GeoJSON carregado uma única vez ao montar o componente
+- Memoization do stateMap para evitar re-renders
+- Otimizado para 27 features (estados)
+
+---
+
 **Component 2: Regional Ranking Table**
+
+**Status:** ✅ IMPLEMENTADO (Phase 2 MVP)
+
+**Arquivo:** `src/frontend/src/components/StateRankingTable.tsx`
+
 ```tsx
-export function RegionalRanking({ regionalData }) {
+export function StateRankingTable({ states, onStateClick, selectedState }) {
   return (
-    <table>
+    <table className="w-full">
       <thead>
         <tr>
+          <th>#</th>
+          <th>Estado</th>
           <th>Região</th>
           <th>Sentimento</th>
           <th>Menções</th>
-          <th>Top 3 Temas</th>
-          <th>Ação</th>
+          <th>Temas Principais</th>
         </tr>
       </thead>
       <tbody>
-        {regionalData.map(r => (
-          <tr key={r.state_code}>
-            <td>{r.state_name}</td>
-            <td>{r.sentiment_score.toFixed(2)}</td>
-            <td>{r.volume}</td>
-            <td>{r.top_themes.join(', ')}</td>
+        {sortedStates.map((state, index) => (
+          <tr key={state.state_code} onClick={() => onStateClick(state.state_code)}>
+            <td>{index + 1}</td>
+            <td>{state.state_name} ({state.state_code})</td>
+            <td>{state.region}</td>
             <td>
-              <button onClick={() => focusOnRegion(r.state_code)}>
-                Ver detalhes
-              </button>
+              <span className={getSentimentBadgeColor(state.avg_sentiment)}>
+                {getSentimentIcon(state.avg_sentiment)} {state.avg_sentiment}
+              </span>
             </td>
+            <td>{state.mention_volume.toLocaleString('pt-BR')}</td>
+            <td>{state.top_themes.slice(0, 3).map(t => <span key={t}>{t}</span>)}</td>
           </tr>
         ))}
       </tbody>
@@ -172,32 +213,108 @@ export function RegionalRanking({ regionalData }) {
 }
 ```
 
-#### 1.5 Implementation Checklist
+**Funcionalidades:**
+- Tabela com 27 estados ordenados por sentimento (descendente)
+- Badges coloridas por sentimento com ícones (📈 📉 ➡️)
+- Click em linha = seleciona estado e sincroniza com mapa
+- Highlight de linha selecionada
+- Localização de números em português
+- Exibe top 3 temas por estado
+- Responsive com scroll horizontal em mobile
 
-- [ ] **Week 1: Backend Setup**
-  - [ ] Create regional_sentiment_scores table
-  - [ ] Add PostGIS extension to Supabase
-  - [ ] Create /api/regional-sentiment endpoint
-  - [ ] Test with mock data
+---
 
-- [ ] **Week 1-2: Data Pipeline**
-  - [ ] Modify sentiment analysis to extract location
-  - [ ] Add geolocation enrichment
-  - [ ] Aggregate into regional_sentiment_scores
-  - [ ] Test with real news data
+**Component 3: GeoAnalysis Page**
 
-- [ ] **Week 2: Frontend**
-  - [ ] Create BrazilSentimentMap component
-  - [ ] Create RegionalRanking component
-  - [ ] Subscribe to Supabase real-time updates
-  - [ ] Add to Dashboard home view
-  - [ ] Add dedicated "Regional Analysis" page
+**Status:** ✅ IMPLEMENTADO (Phase 2 MVP)
 
-- [ ] **Week 2: Testing & Polish**
-  - [ ] E2E tests for regional aggregation
-  - [ ] Performance optimization
-  - [ ] Verify map colors are clear
-  - [ ] Test with multiple candidates
+**Arquivo:** `src/frontend/src/pages/GeoAnalysis.tsx`
+
+**Layout:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Análise Geográfica  [Candidato Dropdown]                       │
+├──────────────────────────┬──────────────────────────────────────┤
+│   BrazilMap (2/3)        │  Estatísticas (1/3)                  │
+│   (Leaflet + OSM)        │  ✅ Best State (Verde)               │
+│   500px height           │  ❌ Worst State (Vermelho)           │
+│   Zoom 4                 │  Selecionado: Detalhes               │
+│                          │  (Sentimento, Tema, Menções)         │
+├──────────────────────────┴──────────────────────────────────────┤
+│  StateRankingTable (Full Width)                                  │
+│  27 estados, ordenado por sentimento, clicável                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+**Estados de Carregamento:**
+- `loadingCandidates`: dropdown de candidatos carregando
+- `loading`: dados de sentimento regional carregando
+- `error`: exibe mensagem de erro
+- Empty state: quando não há dados disponíveis
+
+---
+
+#### 1.5 Implementation Status (Phase 2 MVP - Completed 2026-05-09)
+
+**✅ Backend (DONE)**
+- [x] Create regional_sentiment_aggregated table
+- [x] Seed mock data for all 27 states per candidate (realistic distribution)
+- [x] Create /api/geo/regional-sentiment endpoint (with candidateId filter)
+- [x] Calculate statistics: best_state, worst_state, average_sentiment
+- [x] Error handling and proper HTTP status codes
+- [x] API tested and verified returning 27 states with correct structure
+
+**✅ Frontend (DONE)**
+- [x] Install react-leaflet v4 and leaflet
+- [x] Create BrazilMap component with Leaflet + OpenStreetMap
+  - [x] Load GeoJSON from IBGE public dataset (27 Brazilian states)
+  - [x] Color states by sentiment: -1 (red) → +1 (green)
+  - [x] Interactive click to select state
+  - [x] Hover highlighting with blue border
+  - [x] Popup with state details (sentiment, volume, themes)
+  - [x] Sentiment legend with 5 color levels
+  - [x] Selected state details panel
+- [x] Create StateRankingTable component
+  - [x] Sort states by sentiment (descending)
+  - [x] Color-coded sentiment badges with icons
+  - [x] Click row to select/sync with map
+  - [x] Display top 3 themes per state
+  - [x] Locale-aware number formatting
+- [x] Create GeoAnalysis page
+  - [x] Candidate selector dropdown
+  - [x] Two-column layout (map + statistics)
+  - [x] Statistics panel (best/worst states, selected details)
+  - [x] Full-width ranking table
+  - [x] Error handling and loading states
+  - [x] Empty state handling
+- [x] React Router integration
+  - [x] Add route /geo for GeoAnalysis page
+  - [x] Navigation bar with tab links
+  - [x] Dashboard at /
+
+**✅ Styling (DONE)**
+- [x] Install PostCSS and Autoprefixer
+- [x] Create tailwind.config.js and postcss.config.js
+- [x] Tailwind CSS properly configured and processing
+- [x] All Tailwind utility classes rendering correctly
+
+**📋 Next Phase (Data Integration - Phase 3)**
+- [ ] Connect to real sentiment data pipeline
+  - [ ] Modify news aggregation to extract location
+  - [ ] Integrate Claude API for sentiment analysis
+  - [ ] Implement geolocation enrichment
+  - [ ] Aggregate results into regional_sentiment_aggregated
+- [ ] Real-time updates
+  - [ ] Implement WebSocket or Supabase Realtime for live updates
+  - [ ] Auto-refresh map when new data arrives
+- [ ] Performance optimization
+  - [ ] Cache GeoJSON locally
+  - [ ] Optimize database queries for large datasets
+  - [ ] Implement pagination for table if needed
+- [ ] Additional features
+  - [ ] Timeline slider to view sentiment over time
+  - [ ] Regional comparisons (heatmap overlay)
+  - [ ] Export functionality (PNG map, CSV data)
 
 ---
 

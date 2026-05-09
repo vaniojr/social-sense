@@ -24,9 +24,14 @@ Key features:
 ## Tech Stack (Confirmed 2026-05-09)
 
 ### Development Local
-- **Frontend:** React + TypeScript (VSCode)
-- **Backend:** Node.js/Express OR Python/FastAPI (VSCode)
-- **Database:** PostgreSQL (Docker local)
+- **Frontend:** React 18 + TypeScript + Vite (VSCode)
+  - **Maps:** Leaflet + react-leaflet v4 + OpenStreetMap (interactive geographic choropleth)
+  - **Styling:** Tailwind CSS v3 + PostCSS
+  - **Routing:** React Router v6
+  - **HTTP:** Axios
+  - **UI Components:** Custom + Tailwind utilities
+- **Backend:** Node.js/Express + TypeScript (VSCode)
+- **Database:** PostgreSQL (Docker local, port 5034)
 - **IDE:** VSCode
 - **Git:** GitHub
 - **Automation:** GitHub Actions + Python/Node scripts
