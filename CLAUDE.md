@@ -46,16 +46,20 @@ Key features:
 - **Monitoring:** Sentry, GitHub Actions
 - **CI/CD:** GitHub Actions + Railway webhooks
 
-See [FINAL_STACK_CONFIRMATION.md](FINAL_STACK_CONFIRMATION.md) for complete confirmation.
+See [docs/FINAL_STACK_CONFIRMATION.md](docs/FINAL_STACK_CONFIRMATION.md) for complete confirmation.
 
 ## Project Structure
 
 ```
 social-sense/
-├── CLAUDE.md (this file)
+├── CLAUDE.md (this file - project instructions for AI)
 ├── README.md (project overview)
-├── FINAL_STACK_CONFIRMATION.md (stack decisions)
-├── .env.example (environment variables template)
+├── PROJECT_STRUCTURE.md (directory guide)
+├── .gitignore
+│
+├── config/
+│   ├── .env.example (environment variables template)
+│   └── docker-compose.yml (PostgreSQL + pgAdmin)
 │
 ├── docs/
 │   ├── DESIGN.md (product requirements & features)
@@ -63,20 +67,26 @@ social-sense/
 │   ├── IMPLEMENTATION_FEATURES.md (technical implementation details)
 │   ├── API.md (external API integrations)
 │   ├── SETUP_LOCAL.md (local development setup)
-│   ├── EMAIL_SETUP.md (Zoho Mail + Gmail IMAP configuration)
+│   ├── EMAIL_SETUP.md (Zoho Mail configuration)
 │   ├── DEPLOYMENT_GUIDE.md (production deployment)
-│   └── archived/ (historical docs)
+│   ├── QUICK_START.md (quick start guide)
+│   ├── STACK_CONFIRMATION.md (technology decisions)
+│   ├── PHASE_SUMMARY.md (development phases)
+│   └── archived/ (historical documentation)
+│
+├── scripts/
+│   ├── init-db.sql (database initialization)
+│   ├── push-and-run.sh (deploy script)
+│   ├── github-setup.md (GitHub setup instructions)
+│   └── github-push-commands.txt (git commands reference)
 │
 ├── src/
 │   ├── frontend/ (React + TypeScript)
-│   ├── backend/ (Node.js/Python)
+│   ├── backend/ (Node.js + Express)
 │   └── scripts/ (GitHub Actions, automation)
 │
-├── docker-compose.yml (PostgreSQL + pgAdmin)
-├── .github/
-│   └── workflows/ (CI/CD automation)
-│
-└── ideas.txt (original brainstorming)
+└── .github/
+    └── workflows/ (CI/CD automation)
 ```
 
 ## Development Commands
@@ -90,19 +100,17 @@ npm run build                       # Build for production
 npm run lint                        # Lint & format
 
 # Backend
-npm install && npm run server       # Start Node.js backend (localhost:5000)
-# OR
-pip install -r requirements.txt && python main.py  # Python backend
+npm install && npm run dev          # Start Node.js backend (localhost:5001)
 
 # Database
-docker-compose up -d                # Start PostgreSQL + pgAdmin
-docker-compose down                 # Stop containers
+docker-compose -f config/docker-compose.yml up -d     # Start PostgreSQL + pgAdmin
+docker-compose -f config/docker-compose.yml down      # Stop containers
 
 # Deploy
 git push origin main                # Triggers GitHub Actions → Vercel + Railway
 ```
 
-See [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md) for detailed instructions.
+See [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md) for detailed instructions. Configuration files are in [config/](config/).
 
 ## Key Decisions & Architecture
 
