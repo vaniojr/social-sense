@@ -3,7 +3,7 @@
 
 -- Enable extensions
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "postgis";
+-- CREATE EXTENSION IF NOT EXISTS "postgis"; -- Requires postgis image, will add later for geographic features
 
 -- ===== CANDIDATES / PERSONAS TABLE =====
 CREATE TABLE candidates (

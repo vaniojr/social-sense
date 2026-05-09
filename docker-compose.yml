@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: socialsense
     ports:
-      - "5432:5432"
+      - "5034:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/init-db.sql:/docker-entrypoint-initdb.d/init.sql

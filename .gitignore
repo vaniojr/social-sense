@@ -75,3 +75,6 @@ ideas.txt
 notes.txt
 TODO.txt
 .env.backup
+
+# Claude Code
+.claude/
