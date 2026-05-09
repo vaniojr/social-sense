@@ -1,16 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrazilMap } from '../components/BrazilMap';
 import { StateRankingTable } from '../components/StateRankingTable';
-
-interface Candidate {
-  id: string;
-  name: string;
-  description: string;
-  category: string;
-  url: string;
-  created_at: string;
-  updated_at: string;
-}
+import { useCandidate } from '../context/CandidateContext';
 
 interface StateData {
   state_code: string;
@@ -35,38 +26,14 @@ interface RegionalSentimentResponse {
 }
 
 export function GeoAnalysis() {
-  const [candidates, setCandidates] = useState<Candidate[]>([]);
-  const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
+  const { selectedId: selectedCandidateId, selected: selectedCandidate } = useCandidate();
   const [states, setStates] = useState<StateData[]>([]);
   const [selectedState, setSelectedState] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
-  const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<RegionalSentimentResponse['statistics'] | null>(null);
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
-
-  // Load candidates on mount
-  useEffect(() => {
-    const loadCandidates = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/api/candidates`);
-        if (!response.ok) throw new Error('Failed to load candidates');
-        const data = await response.json();
-        setCandidates(data);
-        if (data.length > 0) {
-          setSelectedCandidateId(data[0].id);
-        }
-      } catch (err) {
-        console.error('Error loading candidates:', err);
-        setError('Erro ao carregar candidatos');
-      } finally {
-        setLoadingCandidates(false);
-      }
-    };
-
-    loadCandidates();
-  }, [apiUrl]);
 
   // Load regional sentiment data when candidate changes
   useEffect(() => {
@@ -98,7 +65,6 @@ export function GeoAnalysis() {
     loadRegionalSentiment();
   }, [selectedCandidateId, apiUrl]);
 
-  const selectedCandidate = candidates.find(c => c.id === selectedCandidateId);
   const stateDetails = selectedState ? states.find(s => s.state_code === selectedState) : null;
 
   return (
@@ -108,24 +74,6 @@ export function GeoAnalysis() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">🗺️ Análise Geográfica</h1>
           <p className="text-gray-600">Visualize o sentimento por região e estado brasileiro</p>
-        </div>
-
-        {/* Candidate Selector */}
-        <div className="mb-6 bg-white rounded-lg shadow p-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Selecione um candidato:</label>
-          <select
-            value={selectedCandidateId}
-            onChange={e => setSelectedCandidateId(e.target.value)}
-            disabled={loadingCandidates}
-            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-          >
-            {loadingCandidates && <option>Carregando...</option>}
-            {candidates.map(candidate => (
-              <option key={candidate.id} value={candidate.id}>
-                {candidate.name} ({candidate.category})
-              </option>
-            ))}
-          </select>
         </div>
 
         {error && (
