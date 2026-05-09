@@ -88,6 +88,73 @@ app.post('/api/candidates', async (req: Request, res: Response) => {
   }
 });
 
+// Geographic Analysis - Regional Sentiment
+app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
+  try {
+    const { candidateId } = req.query;
+
+    let query: string;
+    const params: (string | undefined)[] = [];
+
+    if (candidateId) {
+      query = `
+        SELECT
+          rsa.state_code,
+          rsa.state_name,
+          rsa.region,
+          rsa.avg_sentiment,
+          rsa.mention_volume,
+          rsa.top_themes,
+          rsa.last_updated,
+          c.name as candidate_name
+        FROM regional_sentiment_aggregated rsa
+        JOIN candidates c ON c.id = rsa.candidate_id
+        WHERE rsa.candidate_id = $1
+        ORDER BY rsa.avg_sentiment DESC
+      `;
+      params.push(candidateId as string);
+    } else {
+      query = `
+        SELECT
+          rsa.state_code,
+          rsa.state_name,
+          rsa.region,
+          rsa.avg_sentiment,
+          rsa.mention_volume,
+          rsa.top_themes,
+          rsa.last_updated
+        FROM regional_sentiment_aggregated rsa
+        ORDER BY rsa.avg_sentiment DESC
+      `;
+    }
+
+    const result = await pool.query(query, params);
+
+    // Calculate statistics
+    const states = result.rows;
+    const sentiments = states.map((s: any) => s.avg_sentiment);
+    const bestState = states[0] || null;
+    const worstState = states[states.length - 1] || null;
+    const avgSentiment = sentiments.length > 0
+      ? sentiments.reduce((a: number, b: number) => a + b, 0) / sentiments.length
+      : 0;
+
+    res.json({
+      states,
+      total_states: states.length,
+      statistics: {
+        best_state: bestState,
+        worst_state: worstState,
+        average_sentiment: Math.round(avgSentiment * 100) / 100,
+      },
+      timestamp: new Date(),
+    });
+  } catch (error) {
+    console.error('Error fetching regional sentiment:', error);
+    res.status(500).json({ error: 'Failed to fetch regional sentiment' });
+  }
+});
+
 // Sentiment endpoints (placeholder)
 app.get('/api/sentiment/:candidateId', async (req: Request, res: Response) => {
   try {
@@ -137,6 +204,9 @@ app.get('/', (req: Request, res: Response) => {
         list: 'GET /api/candidates',
         get: 'GET /api/candidates/:id',
         create: 'POST /api/candidates',
+      },
+      geographic_analysis: {
+        regional_sentiment: 'GET /api/geo/regional-sentiment?candidateId=<UUID>',
       },
       sentiment: 'GET /api/sentiment/:candidateId',
       chat: 'POST /api/chat',

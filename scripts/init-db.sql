@@ -146,4 +146,56 @@ VALUES
     ('Natura', 'Brazilian Brand', 'brand', 'https://natura.com.br')
 ON CONFLICT DO NOTHING;
 
+-- ===== INSERT REGIONAL SENTIMENT DATA (Mock) =====
+-- Geographic sentiment breakdown for Lula across all 27 Brazilian states
+INSERT INTO regional_sentiment_aggregated (candidate_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
+SELECT
+    (SELECT id FROM candidates WHERE name = 'Lula' LIMIT 1),
+    sentiment_data.region,
+    sentiment_data.state_code,
+    sentiment_data.state_name,
+    sentiment_data.avg_sentiment,
+    sentiment_data.mention_volume,
+    sentiment_data.top_themes,
+    NOW()
+FROM (VALUES
+    -- Southeast Region (Most positive for Lula)
+    ('Southeast', 'SP', 'São Paulo', 0.72, 8420, ARRAY['economia', 'emprego', 'educação']),
+    ('Southeast', 'RJ', 'Rio de Janeiro', 0.68, 6890, ARRAY['segurança', 'saúde', 'economia']),
+    ('Southeast', 'MG', 'Minas Gerais', 0.55, 5320, ARRAY['agricultura', 'economia', 'educação']),
+    ('Southeast', 'ES', 'Espírito Santo', 0.48, 2150, ARRAY['economia', 'turismo', 'educação']),
+
+    -- Northeast Region (Mixed sentiment)
+    ('Northeast', 'BA', 'Bahia', -0.31, 4210, ARRAY['segurança', 'saúde', 'educação']),
+    ('Northeast', 'PE', 'Pernambuco', 0.22, 3340, ARRAY['educação', 'economia', 'saúde']),
+    ('Northeast', 'CE', 'Ceará', 0.18, 3890, ARRAY['turismo', 'economia', 'saúde']),
+    ('Northeast', 'MA', 'Maranhão', 0.35, 2560, ARRAY['economia', 'agricultura', 'educação']),
+    ('Northeast', 'PB', 'Paraíba', 0.28, 1890, ARRAY['educação', 'saúde', 'economia']),
+    ('Northeast', 'RN', 'Rio Grande do Norte', 0.15, 1560, ARRAY['turismo', 'economia', 'saúde']),
+    ('Northeast', 'AL', 'Alagoas', 0.12, 1230, ARRAY['educação', 'saúde', 'economia']),
+    ('Northeast', 'SE', 'Sergipe', 0.08, 890, ARRAY['economia', 'educação', 'saúde']),
+    ('Northeast', 'PI', 'Piauí', 0.25, 1120, ARRAY['agricultura', 'educação', 'economia']),
+
+    -- South Region (More negative for Lula)
+    ('South', 'RS', 'Rio Grande do Sul', -0.42, 5670, ARRAY['economia', 'agricultura', 'educação']),
+    ('South', 'SC', 'Santa Catarina', -0.28, 3890, ARRAY['economia', 'educação', 'saúde']),
+    ('South', 'PR', 'Paraná', -0.15, 4560, ARRAY['agricultura', 'economia', 'educação']),
+
+    -- North Region (Moderate sentiment)
+    ('North', 'PA', 'Pará', 0.32, 3120, ARRAY['ambiente', 'economia', 'educação']),
+    ('North', 'AM', 'Amazonas', 0.28, 2340, ARRAY['ambiente', 'economia', 'saúde']),
+    ('North', 'AC', 'Acre', 0.22, 890, ARRAY['educação', 'ambiente', 'saúde']),
+    ('North', 'RO', 'Rondônia', 0.18, 1120, ARRAY['economia', 'agricultura', 'saúde']),
+    ('North', 'RR', 'Roraima', 0.15, 650, ARRAY['educação', 'saúde', 'economia']),
+    ('North', 'AP', 'Amapá', 0.12, 580, ARRAY['saúde', 'educação', 'economia']),
+    ('North', 'TO', 'Tocantins', 0.20, 1230, ARRAY['agricultura', 'economia', 'educação']),
+
+    -- Center-West Region (Moderate to positive)
+    ('Center-West', 'DF', 'Distrito Federal', 0.38, 2980, ARRAY['educação', 'saúde', 'economia']),
+    ('Center-West', 'MT', 'Mato Grosso', 0.08, 2340, ARRAY['agricultura', 'economia', 'educação']),
+    ('Center-West', 'MS', 'Mato Grosso do Sul', 0.12, 1890, ARRAY['agricultura', 'economia', 'saúde']),
+    ('Center-West', 'GO', 'Goiás', 0.22, 2670, ARRAY['agricultura', 'economia', 'educação'])
+) AS sentiment_data(region, state_code, state_name, avg_sentiment, mention_volume, top_themes)
+ON CONFLICT (candidate_id, state_code) DO NOTHING;
+
 COMMIT;
