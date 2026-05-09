@@ -232,20 +232,23 @@ export function Dashboard() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
-                      <GeoJSON
-                        data={geoJsonData}
-                        style={(feature: any) => {
-                          const code = feature.properties?.SIGLA;
-                          const state = data.states.find(s => s.state_code === code);
-                          return {
-                            fillColor: state ? sentimentToColor(state.avg_sentiment) : '#e5e7eb',
-                            weight: 1,
-                            opacity: 1,
-                            color: '#ffffff',
-                            fillOpacity: 0.7,
-                          };
-                        }}
-                      />
+                      {data && (
+                        <GeoJSON
+                          key={`geojson-${data.timestamp}`}
+                          data={geoJsonData}
+                          style={(feature: any) => {
+                            const code = feature.properties?.SIGLA;
+                            const state = data.states.find(s => s.state_code === code);
+                            return {
+                              fillColor: state ? sentimentToColor(state.avg_sentiment) : '#e5e7eb',
+                              weight: 1,
+                              opacity: 1,
+                              color: '#ffffff',
+                              fillOpacity: 0.7,
+                            };
+                          }}
+                        />
+                      )}
                     </MapContainer>
                   </div>
                 ) : (

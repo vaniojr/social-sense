@@ -62,7 +62,10 @@ export function GeoAnalysis() {
       }
     };
 
-    loadRegionalSentiment();
+    console.log('🗺️ Loading regional sentiment for entity:', selectedId);
+    loadRegionalSentiment().then(() => {
+      console.log('✅ Regional sentiment loaded successfully');
+    });
   }, [selectedId, apiUrl]);
 
   const stateDetails = selectedState ? states.find(s => s.state_code === selectedState) : null;
