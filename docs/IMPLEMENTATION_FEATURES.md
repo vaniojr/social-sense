@@ -26,7 +26,7 @@ Permitir que usuários vejam um mapa do Brasil com sentimento agregado por estad
 -- Regional Sentiment Scores
 CREATE TABLE regional_sentiment_scores (
   id UUID PRIMARY KEY,
-  candidate_id UUID REFERENCES candidates,
+  entity_id UUID REFERENCES entities,
   region VARCHAR(50), -- 'North', 'Northeast', 'Southeast', 'South', 'Center-West'
   state_code VARCHAR(2), -- 'SP', 'RJ', 'MG', etc
   state_name VARCHAR(50), -- 'São Paulo', 'Rio de Janeiro'
@@ -41,8 +41,8 @@ CREATE TABLE regional_sentiment_scores (
 );
 
 -- Index for fast queries
-CREATE INDEX idx_regional_sentiment_candidate_timestamp 
-  ON regional_sentiment_scores(candidate_id, timestamp DESC);
+CREATE INDEX idx_regional_sentiment_entity_timestamp 
+  ON regional_sentiment_scores(entity_id, timestamp DESC);
 ```
 
 #### 1.2 Data Flow
@@ -78,17 +78,17 @@ Step 5: Real-time update dashboard
 #### 1.3 API Endpoint
 
 ```typescript
-// POST /api/regional-sentiment
+// GET /api/geo/regional-sentiment
 // Purpose: Get regional sentiment breakdown
 
-export async function POST(req: Request) {
-  const { candidate_id, days = 7 } = await req.json();
+export async function GET(req: Request) {
+  const { entityId, days = 7 } = req.query;
   
   // Query regional scores from past N days
   const { data: regionalScores } = await supabase
-    .from('regional_sentiment_scores')
+    .from('regional_sentiment_aggregated')
     .select('*')
-    .eq('candidate_id', candidate_id)
+    .eq('entity_id', entityId)
     .gte('created_at', new Date(Date.now() - days * 86400000))
     .order('timestamp', { ascending: false });
   
@@ -96,9 +96,12 @@ export async function POST(req: Request) {
   const aggregated = aggregateByRegion(regionalScores);
   
   return Response.json({
-    regional_scores: aggregated,
-    best_region: findBestRegion(aggregated),
-    worst_region: findWorstRegion(aggregated),
+    states: aggregated,
+    statistics: {
+      best_state: findBestState(aggregated),
+      worst_state: findWorstState(aggregated),
+      average_sentiment: calculateAverageSentiment(aggregated)
+    },
     timestamp: new Date()
   });
 }
@@ -233,7 +236,7 @@ export function StateRankingTable({ states, onStateClick, selectedState }) {
 **Layout:**
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  Análise Geográfica  [Candidato Dropdown]                       │
+│  Análise Geográfica  [Entidade Dropdown]                        │
 ├──────────────────────────┬──────────────────────────────────────┤
 │   BrazilMap (2/3)        │  Estatísticas (1/3)                  │
 │   (Leaflet + OSM)        │  ✅ Best State (Verde)               │
@@ -258,8 +261,8 @@ export function StateRankingTable({ states, onStateClick, selectedState }) {
 
 **✅ Backend (DONE)**
 - [x] Create regional_sentiment_aggregated table
-- [x] Seed mock data for all 27 states per candidate (realistic distribution)
-- [x] Create /api/geo/regional-sentiment endpoint (with candidateId filter)
+- [x] Seed mock data for all 27 states per entity (realistic distribution)
+- [x] Create /api/geo/regional-sentiment endpoint (with entityId filter)
 - [x] Calculate statistics: best_state, worst_state, average_sentiment
 - [x] Error handling and proper HTTP status codes
 - [x] API tested and verified returning 27 states with correct structure
@@ -337,7 +340,7 @@ Permitir que usuários façam perguntas em linguagem natural sobre seus dados e 
 CREATE TABLE chat_conversations (
   id UUID PRIMARY KEY,
   user_id UUID REFERENCES auth.users,
-  candidate_id UUID REFERENCES candidates,
+  entity_id UUID REFERENCES entities,
   title VARCHAR(200), -- auto-generated from first question
   created_at TIMESTAMP,
   updated_at TIMESTAMP
@@ -404,7 +407,7 @@ Step 5: Save to database
 
 export async function POST(req: Request) {
   const {
-    candidate_id,
+    entityId,
     conversation_id,
     question
   } = await req.json();
@@ -417,7 +420,7 @@ export async function POST(req: Request) {
   const history = await getConversationHistory(conversation_id);
   
   // Gather context data
-  const context = await gatherContextData(candidate_id, 7); // last 7 days
+  const context = await gatherContextData(entityId, 7); // last 7 days
   
   // Build messages for Claude
   const messages = [
@@ -496,7 +499,7 @@ Answer based on this data. Be specific, cite numbers, and suggest actions.`;
 
 **Component 1: Chat Container**
 ```tsx
-export function ChatCopilot({ candidateId }) {
+export function ChatCopilot({ entityId }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -512,7 +515,7 @@ export function ChatCopilot({ candidateId }) {
     const response = await fetch('/api/chat', {
       method: 'POST',
       body: JSON.stringify({
-        candidate_id: candidateId,
+        entityId: entityId,
         question: userMessage
       })
     });
@@ -580,7 +583,7 @@ export function ChatCopilot({ candidateId }) {
 
 **Component 2: Chat Integration in Dashboard**
 ```tsx
-export function Dashboard({ candidateId }) {
+export function Dashboard({ entityId }) {
   return (
     <div className="dashboard-grid">
       <div className="main-content">
@@ -589,7 +592,7 @@ export function Dashboard({ candidateId }) {
       </div>
       
       <aside className="sidebar">
-        <ChatCopilot candidateId={candidateId} />
+        <ChatCopilot entityId={entityId} />
       </aside>
     </div>
   );

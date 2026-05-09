@@ -83,11 +83,11 @@
   - JSONB for storing sentiment analysis results
   - Full-text search for news/content
 - **Key Tables:**
-  - `candidates` / `personas` - monitored entities
+  - `entities` - monitored entities (politicians, influencers, brands)
   - `news_articles` - aggregated news
   - `sentiment_scores` - regional analysis
   - `alerts` - crisis detection
-  - `chat_history` - copilot conversations
+  - `chat_conversations` - copilot conversations
 
 ### Automation (GitHub Actions + Python/Node Scripts)
 - **Responsibility:** Scheduled tasks, data collection, processing
@@ -135,7 +135,7 @@ News Articles / Social Media Posts with location info
 ```
 GitHub Actions (schedule: daily 6 AM)
     │
-    ├─→ NewsAPI: Fetch recent news about candidates
+    ├─→ NewsAPI: Fetch recent news about monitored entities
     │
     ├─→ RSS Feeds: Scrape Brazilian news portals
     │

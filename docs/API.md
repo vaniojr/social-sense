@@ -93,7 +93,7 @@ NEWSAPI_KEY=abc123...
 **Endpoint usado:**
 ```
 GET https://newsapi.org/v2/everything
-  ?q=<candidate_name>
+  ?q=<entity_name>
   &language=pt
   &sortBy=publishedAt
   &apiKey=<sua-key>
@@ -221,10 +221,10 @@ const response = await client.messages.create({
   max_tokens: 1024,
   messages: [{
     role: "user",
-    content: `Compare o sentimento sobre meu candidato vs meu concorrente:
+    content: `Compare o sentimento sobre minha entidade vs concorrente:
 
-    Meu candidato:
-    ${JSON.stringify(candidateData)}
+    Minha entidade:
+    ${JSON.stringify(entityData)}
     
     Concorrente:
     ${JSON.stringify(competitorData)}
@@ -270,7 +270,7 @@ TWITTER_API_KEY=your_bearer_token
 **Endpoint principal:**
 ```
 GET /2/tweets/search/recent
-  ?query=candidate_name
+  ?query=entity_name
   &max_results=100
   &tweet.fields=author_id,created_at,public_metrics,geo
 ```

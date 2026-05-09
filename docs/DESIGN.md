@@ -9,9 +9,9 @@
 ## 2. Usuários-Alvo (Multi-Vertical)
 
 ### Vertical 1: Política (High-value + Seasonal)
-- **Agências políticas:** gerenciam múltiplos candidatos (Ticket: R$5k-20k/mês)
+- **Agências políticas:** gerenciam múltiplas entidades (Ticket: R$5k-20k/mês)
 - **Campanhas médias/grandes:** R$ 50k+/mês de orçamento (Ticket: R$2k-5k/mês)
-- **Partidos/Diretórios:** monitora múltiplos candidatos regionalmente (Ticket: R$10k-30k/mês)
+- **Partidos/Diretórios:** monitora múltiplas entidades regionalmente (Ticket: R$10k-30k/mês)
 - **Assessorias de campanha:** equipes de marketing político (Ticket: R$3k-8k/mês)
 
 ### Vertical 2: Influencers (High-value + Recurring)
@@ -45,10 +45,10 @@
 ## 4. Features Principais
 
 ### Fase 1 (MVP - 4 semanas)
-- [ ] **News Aggregation** - coleta notícias de portais políticos em tempo real
+- [ ] **News Aggregation** - coleta notícias de portais em tempo real
 - [ ] **Smart Summarization** - resume notícias com IA
 - [ ] **🗺️ Geographic Analysis** - mapa de sentimento por estado/região
-- [ ] **Alerts** - notifica sobre menções do candidato
+- [ ] **Alerts** - notifica sobre menções da entidade
 - [ ] **Dashboard Básico** - painel com mapa, notícias, alertas
 - [ ] **💬 Chat AI Copilot** - interface conversacional para perguntas (MVP simples)
 
@@ -103,7 +103,7 @@ Dashboard
 │   └── Histórico de ações tomadas
 │
 └── Configurações
-    ├── Candidatos/temas monitorados
+    ├── Entidades/temas monitorados
     ├── Canais (redes sociais, news)
     ├── Regiões de foco
     └── Alertas e notificações
@@ -112,20 +112,20 @@ Dashboard
 ## 6. Modelo de Dados Simplificado
 
 ```
-Candidates
+Entities
 ├── name
-├── party
-├── region
+├── type (politician, influencer, brand)
+├── description
 └── created_at
 
 Monitoring Topics
-├── candidate_id
+├── entity_id
 ├── topic (string)
 ├── active (bool)
 └── keywords (array)
 
 News Items
-├── candidate_id
+├── entity_id
 ├── title
 ├── content
 ├── source
@@ -135,7 +135,7 @@ News Items
 └── created_at
 
 Alerts
-├── candidate_id
+├── entity_id
 ├── type (news, social, attack, trend)
 ├── severity (low/medium/high/critical)
 ├── title
@@ -144,7 +144,7 @@ Alerts
 └── created_at
 
 Sentiment Scores
-├── candidate_id
+├── entity_id
 ├── topic
 ├── score (-1 to +1)
 ├── volume (número de menções)
@@ -182,12 +182,12 @@ n8n: Coleta dados do concorrente → Claude: Compara métricas
 - Como [persona], quero **fazer perguntas em linguagem natural sobre meus dados** ("Onde meu concorrente está crescendo?") ⭐
 
 **Específico por vertical:**
-- **Político:** receber alerta de notícia sobre candidato + saber em qual estado tenho melhor sentimento
+- **Político:** receber alerta de notícia sobre entidade política + saber em qual estado tenho melhor sentimento
 - **Influencer:** receber alerta de tweet viralizando + ver em qual região tenho mais engagement
 - **Brand:** receber alerta de review negativo + entender qual região está insatisfeita
 
 ### P1 (Importante - Fase 2) - Por Vertical
-- Como **agência política**, quero **saber em qual estado/região meu candidato tem melhor/pior sentimento**
+- Como **agência política**, quero **saber em qual estado/região minha entidade tem melhor/pior sentimento**
 - Como **agência de influencers**, quero **comparar engajamento de múltiplos influenciadores por região**
 - Como **brand manager**, quero **comparar sentimento da minha marca vs concorrentes em cada região**
 - Como **agência política**, quero **fazer perguntas tipo "Quais são os 3 temas trending no Nordeste?" diretamente no chat**
@@ -221,9 +221,9 @@ n8n: Coleta dados do concorrente → Claude: Compara métricas
 ### Política
 | Tier | Personas | Preço/mês |
 |------|----------|-----------|
-| Starter | 1 candidato | R$ 800 |
-| Professional | 3 candidatos | R$ 2,500 |
-| Agency | 10-50 candidatos | R$ 8,000–20,000 |
+| Starter | 1 entidade | R$ 800 |
+| Professional | 3 entidades | R$ 2,500 |
+| Agency | 10-50 entidades | R$ 8,000–20,000 |
 
 ### Influencers (MAIS LUCRATIVO)
 | Tier | Personas | Preço/mês |
@@ -255,13 +255,13 @@ n8n: Coleta dados do concorrente → Claude: Compara métricas
 
 ### Fase 1 (Ago-Set 2026): MVP Política + MVP Influencers
 **Timing:** Aproveita período eleitoral BR + crescimento de influencers
-- Validação com 3-5 agências políticas (piloto)
+- Validação com 3-5 agências políticas (piloto com entidades políticas)
 - Validação com 3-5 agências de influencers (piloto paralelo)
 - Lançamento: Feature parity entre verticais
 - Objetivo: 10-15 clientes pagando
 
 ### Fase 2 (Out-Nov 2026): Expansão + Otimização
-- Lançamento beta com 20-30 campanhas políticas (usar eleições)
+- Lançamento beta com 20-30 entidades políticas (usar eleições)
 - Lançamento beta com 10-20 agências de influencers
 - Adicionar vertical Brands (menor mercado inicial)
 - Objetivo: 30-50 clientes
