@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { BrazilMap } from '../components/BrazilMap';
 import { StateRankingTable } from '../components/StateRankingTable';
-import { useCandidate } from '../context/CandidateContext';
+import { useEntity } from '../context/EntityContext';
 
 interface StateData {
   state_code: string;
@@ -11,7 +11,7 @@ interface StateData {
   mention_volume: number;
   top_themes: string[];
   last_updated: string;
-  candidate_name?: string;
+  entity_name?: string;
 }
 
 interface RegionalSentimentResponse {
@@ -26,7 +26,7 @@ interface RegionalSentimentResponse {
 }
 
 export function GeoAnalysis() {
-  const { selectedId: selectedCandidateId, selected: selectedCandidate } = useCandidate();
+  const { selectedId, selected } = useEntity();
   const [states, setStates] = useState<StateData[]>([]);
   const [selectedState, setSelectedState] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
@@ -35,16 +35,16 @@ export function GeoAnalysis() {
 
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-  // Load regional sentiment data when candidate changes
+  // Load regional sentiment data when entity changes
   useEffect(() => {
-    if (!selectedCandidateId) return;
+    if (!selectedId) return;
 
     const loadRegionalSentiment = async () => {
       setLoading(true);
       setError(null);
       try {
-        const url = selectedCandidateId
-          ? `${apiUrl}/api/geo/regional-sentiment?candidateId=${selectedCandidateId}`
+        const url = selectedId
+          ? `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`
           : `${apiUrl}/api/geo/regional-sentiment`;
 
         const response = await fetch(url);
@@ -63,7 +63,7 @@ export function GeoAnalysis() {
     };
 
     loadRegionalSentiment();
-  }, [selectedCandidateId, apiUrl]);
+  }, [selectedId, apiUrl]);
 
   const stateDetails = selectedState ? states.find(s => s.state_code === selectedState) : null;
 
@@ -108,11 +108,11 @@ export function GeoAnalysis() {
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">📊 Estatísticas</h2>
 
-                {selectedCandidate && (
+                {selected && (
                   <div className="mb-6 pb-6 border-b border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Candidato:</p>
-                    <p className="text-lg font-semibold text-gray-900">{selectedCandidate.name}</p>
-                    <p className="text-xs text-gray-500">{selectedCandidate.category}</p>
+                    <p className="text-sm text-gray-600 mb-1">Entidade:</p>
+                    <p className="text-lg font-semibold text-gray-900">{selected.name}</p>
+                    <p className="text-xs text-gray-500">{selected.type}</p>
                   </div>
                 )}
 

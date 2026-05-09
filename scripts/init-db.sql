@@ -5,23 +5,23 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- CREATE EXTENSION IF NOT EXISTS "postgis"; -- Requires postgis image, will add later for geographic features
 
--- ===== CANDIDATES / PERSONAS TABLE =====
-CREATE TABLE candidates (
+-- ===== ENTITIES / MONITORED ENTITIES TABLE =====
+CREATE TABLE entities (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     description TEXT,
-    category VARCHAR(50), -- 'politician', 'influencer', 'brand'
+    type VARCHAR(50), -- 'politician', 'influencer', 'brand'
     url VARCHAR(500),
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_candidates_category ON candidates(category);
+CREATE INDEX idx_entities_type ON entities(type);
 
 -- ===== NEWS ARTICLES TABLE =====
 CREATE TABLE news_articles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     title VARCHAR(500) NOT NULL,
     description TEXT,
     url VARCHAR(500),
@@ -32,14 +32,14 @@ CREATE TABLE news_articles (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_news_candidate ON news_articles(candidate_id);
+CREATE INDEX idx_news_entity ON news_articles(entity_id);
 CREATE INDEX idx_news_published ON news_articles(published_at DESC);
 CREATE INDEX idx_news_fetched ON news_articles(fetched_at DESC);
 
 -- ===== SENTIMENT SCORES TABLE =====
 CREATE TABLE sentiment_scores (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     article_id UUID REFERENCES news_articles(id) ON DELETE SET NULL,
     sentiment_score DECIMAL(3, 2), -- -1.00 to 1.00
     confidence DECIMAL(3, 2), -- 0.00 to 1.00
@@ -52,7 +52,7 @@ CREATE TABLE sentiment_scores (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_sentiment_candidate ON sentiment_scores(candidate_id);
+CREATE INDEX idx_sentiment_entity ON sentiment_scores(entity_id);
 CREATE INDEX idx_sentiment_region ON sentiment_scores(region);
 CREATE INDEX idx_sentiment_state ON sentiment_scores(state_code);
 CREATE INDEX idx_sentiment_created ON sentiment_scores(created_at DESC);
@@ -60,7 +60,7 @@ CREATE INDEX idx_sentiment_created ON sentiment_scores(created_at DESC);
 -- ===== REGIONAL SENTIMENT SCORES (Aggregated) =====
 CREATE TABLE regional_sentiment_aggregated (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     region VARCHAR(100),
     state_code VARCHAR(2),
     state_name VARCHAR(100),
@@ -68,16 +68,16 @@ CREATE TABLE regional_sentiment_aggregated (
     mention_volume INTEGER DEFAULT 0,
     top_themes TEXT[],
     last_updated TIMESTAMP DEFAULT NOW(),
-    UNIQUE(candidate_id, state_code)
+    UNIQUE(entity_id, state_code)
 );
 
-CREATE INDEX idx_regional_agg_candidate ON regional_sentiment_aggregated(candidate_id);
+CREATE INDEX idx_regional_agg_entity ON regional_sentiment_aggregated(entity_id);
 CREATE INDEX idx_regional_agg_state ON regional_sentiment_aggregated(state_code);
 
 -- ===== ALERTS TABLE =====
 CREATE TABLE alerts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     title VARCHAR(255) NOT NULL,
     description TEXT,
     severity VARCHAR(20), -- 'low', 'medium', 'high', 'critical'
@@ -90,27 +90,27 @@ CREATE TABLE alerts (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_alerts_candidate ON alerts(candidate_id);
+CREATE INDEX idx_alerts_entity ON alerts(entity_id);
 CREATE INDEX idx_alerts_active ON alerts(is_active);
 CREATE INDEX idx_alerts_created ON alerts(created_at DESC);
 
 -- ===== CHAT CONVERSATIONS TABLE =====
 CREATE TABLE chat_conversations (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     user_id VARCHAR(255), -- Could be email or user ID
     messages JSONB, -- Array of {role: 'user'|'assistant', content: string}
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_chat_candidate ON chat_conversations(candidate_id);
+CREATE INDEX idx_chat_entity ON chat_conversations(entity_id);
 CREATE INDEX idx_chat_user ON chat_conversations(user_id);
 
 -- ===== API KEYS / SECRETS TABLE =====
 CREATE TABLE api_keys (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     key_type VARCHAR(50), -- 'newsapi', 'twitter', 'instagram', etc
     key_value TEXT NOT NULL,
     is_active BOOLEAN DEFAULT TRUE,
@@ -118,19 +118,19 @@ CREATE TABLE api_keys (
     last_used TIMESTAMP
 );
 
-CREATE INDEX idx_api_keys_candidate ON api_keys(candidate_id);
+CREATE INDEX idx_api_keys_entity ON api_keys(entity_id);
 CREATE INDEX idx_api_keys_type ON api_keys(key_type);
 
 -- ===== AUDIT LOG =====
 CREATE TABLE audit_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    candidate_id UUID REFERENCES candidates(id) ON DELETE CASCADE,
+    entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
     action VARCHAR(100),
     details JSONB,
     created_at TIMESTAMP DEFAULT NOW()
 );
 
-CREATE INDEX idx_audit_candidate ON audit_logs(candidate_id);
+CREATE INDEX idx_audit_entity ON audit_logs(entity_id);
 CREATE INDEX idx_audit_created ON audit_logs(created_at DESC);
 
 -- ===== GRANT PERMISSIONS =====
@@ -138,7 +138,7 @@ GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 
 -- ===== INSERT SAMPLE DATA =====
-INSERT INTO candidates (name, description, category, url)
+INSERT INTO entities (name, description, type, url)
 VALUES
     ('Lula', 'Brazilian Politician', 'politician', 'https://example.com'),
     ('Bolsonaro', 'Brazilian Politician', 'politician', 'https://example.com'),
@@ -148,9 +148,9 @@ ON CONFLICT DO NOTHING;
 
 -- ===== INSERT REGIONAL SENTIMENT DATA (Mock) =====
 -- Geographic sentiment breakdown for Lula across all 27 Brazilian states
-INSERT INTO regional_sentiment_aggregated (candidate_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
+INSERT INTO regional_sentiment_aggregated (entity_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
 SELECT
-    (SELECT id FROM candidates WHERE name = 'Lula' LIMIT 1),
+    (SELECT id FROM entities WHERE name = 'Lula' LIMIT 1),
     sentiment_data.region,
     sentiment_data.state_code,
     sentiment_data.state_name,
@@ -196,6 +196,6 @@ FROM (VALUES
     ('Center-West', 'MS', 'Mato Grosso do Sul', 0.12, 1890, ARRAY['agricultura', 'economia', 'saúde']),
     ('Center-West', 'GO', 'Goiás', 0.22, 2670, ARRAY['agricultura', 'economia', 'educação'])
 ) AS sentiment_data(region, state_code, state_name, avg_sentiment, mention_volume, top_themes)
-ON CONFLICT (candidate_id, state_code) DO NOTHING;
+ON CONFLICT (entity_id, state_code) DO NOTHING;
 
 COMMIT;

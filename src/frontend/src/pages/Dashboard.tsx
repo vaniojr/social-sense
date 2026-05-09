@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { useCandidate } from '../context/CandidateContext';
+import { useEntity } from '../context/EntityContext';
 
 interface StateData {
   state_code: string;
@@ -69,7 +69,7 @@ const MOCK_ALERTS: Alert[] = [
 ];
 
 export function Dashboard() {
-  const { selectedId, selected } = useCandidate();
+  const { selectedId, selected } = useEntity();
   const [data, setData] = useState<RegionalSentimentResponse | null>(null);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -98,7 +98,7 @@ export function Dashboard() {
       setLoading(true);
       try {
         const response = await fetch(
-          `${apiUrl}/api/geo/regional-sentiment?candidateId=${selectedId}`
+          `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`
         );
         if (!response.ok) throw new Error('Failed to load data');
         const result = await response.json();
@@ -125,7 +125,7 @@ export function Dashboard() {
             📊 Resumo Executivo
           </h1>
           <p className="text-gray-600">
-            {selected ? `${selected.name} • ${selected.category}` : 'Selecione um candidato'}
+            {selected ? `${selected.name} • ${selected.type}` : 'Selecione uma entidade'}
             {data && (
               <span className="text-xs text-gray-400 ml-3">
                 Atualizado em {new Date(data.timestamp).toLocaleTimeString('pt-BR')}

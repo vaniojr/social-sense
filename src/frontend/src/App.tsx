@@ -1,11 +1,11 @@
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom'
-import { CandidateProvider, useCandidate } from './context/CandidateContext'
+import { EntityProvider, useEntity } from './context/EntityContext'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
 
 function Navigation() {
   const location = useLocation()
-  const { candidates, selectedId, setSelectedId, loading } = useCandidate()
+  const { entities, selectedId, setSelectedId, loading } = useEntity()
 
   return (
     <nav className="bg-white shadow-md">
@@ -36,7 +36,7 @@ function Navigation() {
               🗺️ Análise Geográfica
             </Link>
             <div className="ml-6 border-l border-gray-200 pl-6">
-              <label className="text-xs font-semibold text-gray-600 block mb-1">Candidato</label>
+              <label className="text-xs font-semibold text-gray-600 block mb-1">Entidade</label>
               <select
                 value={selectedId}
                 onChange={e => setSelectedId(e.target.value)}
@@ -44,9 +44,9 @@ function Navigation() {
                 className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
               >
                 {loading && <option>Carregando...</option>}
-                {candidates.map(candidate => (
-                  <option key={candidate.id} value={candidate.id}>
-                    {candidate.name} ({candidate.category})
+                {entities.map(entity => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name} ({entity.type})
                   </option>
                 ))}
               </select>
@@ -60,7 +60,7 @@ function Navigation() {
 
 function App() {
   return (
-    <CandidateProvider>
+    <EntityProvider>
       <Router>
         <div className="min-h-screen bg-gray-50">
           <Navigation />
@@ -70,7 +70,7 @@ function App() {
           </Routes>
         </div>
       </Router>
-    </CandidateProvider>
+    </EntityProvider>
   )
 }
 
