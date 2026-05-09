@@ -1,0 +1,51 @@
+════════════════════════════════════════════════════════════════
+GITHUB PUSH - COPIE E COLE ESTES COMANDOS
+════════════════════════════════════════════════════════════════
+
+ANTES DE EXECUTAR:
+1. Crie repositório em https://github.com/new
+2. Nome: social-sense
+3. Copie a URL do repositório (algo como https://github.com/SEUUSERNAME/social-sense.git)
+4. SUBSTITUA SEUUSERNAME pela sua URL real nos comandos abaixo
+
+════════════════════════════════════════════════════════════════
+
+PASSO 1: Abra terminal e vá ao diretório do projeto
+
+cd "/Users/vaniojr/Library/CloudStorage/GoogleDrive-vaniojr@gmail.com/My Drive/Projects/social-sense"
+
+════════════════════════════════════════════════════════════════
+
+PASSO 2: Adicione o repositório do GitHub (substitua SEUURL)
+
+git remote add origin SEUURL
+
+Exemplo real:
+git remote add origin https://github.com/vaniojr/social-sense.git
+
+════════════════════════════════════════════════════════════════
+
+PASSO 3: Faça o push
+
+git push -u origin main
+
+════════════════════════════════════════════════════════════════
+
+ESPERADO:
+Enumerating objects: 21, done.
+Counting objects: 100% (21/21), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (20/20), done.
+Writing objects: 100% (21/21), 6.78 KiB | 6.78 KiB/s, done.
+Total 21 (delta 0), reused 0 (delta 0), pack-reused 0
+To https://github.com/SEUUSERNAME/social-sense.git
+ * [new branch]      main -> main
+Branch 'main' set up to track remote branch 'main' from 'origin'.
+
+════════════════════════════════════════════════════════════════
+
+DEPOIS:
+Visite https://github.com/SEUUSERNAME/social-sense
+E deve ver todos os arquivos!
+
+════════════════════════════════════════════════════════════════
