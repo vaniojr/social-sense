@@ -68,30 +68,22 @@ function Layout() {
   )
 }
 
-// Router configuration with v7 future flags
-const router = createBrowserRouter(
-  [
-    {
-      element: <Layout />,
-      children: [
-        {
-          path: '/',
-          element: <Dashboard />,
-        },
-        {
-          path: '/geo',
-          element: <GeoAnalysis />,
-        },
-      ],
-    },
-  ],
+// Router configuration (React Router 7 - future flags are now defaults)
+const router = createBrowserRouter([
   {
-    future: {
-      v7_startTransition: true,
-      v7_relativeSplatPath: true,
-    },
-  }
-)
+    element: <Layout />,
+    children: [
+      {
+        path: '/',
+        element: <Dashboard />,
+      },
+      {
+        path: '/geo',
+        element: <GeoAnalysis />,
+      },
+    ],
+  },
+])
 
 function App() {
   return (
