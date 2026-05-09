@@ -1,0 +1,77 @@
+# Environment Variables
+.env
+.env.local
+.env.*.local
+.env.production.local
+
+# Dependencies
+node_modules/
+package-lock.json
+yarn.lock
+pip-cache/
+venv/
+env/
+__pycache__/
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+*.egg-info/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.eslintcache
+
+# Testing
+coverage/
+.coverage
+htmlcov/
+.pytest_cache/
+*.log
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.AppleDouble
+.LSOverride
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+.tmp/
+temp/
+
+# Local development
+.local/
+.venv
+*.sqlite
+*.db
+
+# Production builds
+/src/frontend/build
+/src/backend/dist
+
+# Misc
+ideas.txt
+notes.txt
+TODO.txt
+.env.backup
