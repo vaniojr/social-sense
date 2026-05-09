@@ -2,9 +2,10 @@
   "name": "social-sense-backend",
   "version": "0.1.0",
   "description": "Real-time opinion intelligence platform - Backend",
+  "type": "module",
   "main": "dist/main.js",
   "scripts": {
-    "dev": "ts-node src/main.ts",
+    "dev": "node --loader ts-node/esm src/main.ts",
     "build": "tsc",
     "start": "node dist/main.js",
     "lint": "eslint src --ext ts",
