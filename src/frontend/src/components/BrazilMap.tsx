@@ -1,3 +1,8 @@
+import { useEffect, useRef, useState } from 'react';
+import { MapContainer, TileLayer, GeoJSON } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+
 interface StateData {
   state_code: string;
   state_name: string;
@@ -17,102 +22,167 @@ interface BrazilMapProps {
 // Color scale: -1 (red) → 0 (yellow) → +1 (green)
 function sentimentToColor(score: number | string): string {
   const numScore = typeof score === 'string' ? parseFloat(score) : score;
-  if (numScore <= -1) return 'bg-red-600';
-  if (numScore < 0) return 'bg-red-400';
-  if (numScore <= 0.2) return 'bg-yellow-400';
-  if (numScore <= 0.5) return 'bg-lime-400';
-  return 'bg-green-500';
-}
-
-function sentimentToBgStyle(score: number | string): string {
-  const numScore = typeof score === 'string' ? parseFloat(score) : score;
-  if (numScore <= -1) return 'bg-red-50 hover:bg-red-100';
-  if (numScore < 0) return 'bg-red-50 hover:bg-red-100';
-  if (numScore <= 0.2) return 'bg-yellow-50 hover:bg-yellow-100';
-  if (numScore <= 0.5) return 'bg-lime-50 hover:bg-lime-100';
-  return 'bg-green-50 hover:bg-green-100';
+  if (numScore <= -1) return '#dc2626'; // red-600
+  if (numScore < -0.5) return '#ef4444'; // red-500
+  if (numScore < 0) return '#f87171'; // red-400
+  if (numScore <= 0.2) return '#fbbf24'; // amber-400
+  if (numScore <= 0.5) return '#84cc16'; // lime-500
+  return '#22c55e'; // green-500
 }
 
 export function BrazilMap({ states, onStateClick, selectedState }: BrazilMapProps) {
+  const [geoJsonData, setGeoJsonData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const geoJsonRef = useRef<any>(null);
+
   const stateMap = states.reduce((acc, state) => {
     acc[state.state_code] = state;
     return acc;
   }, {} as Record<string, StateData>);
 
-  // Brazilian states organized by region
-  const regions = {
-    'Northeast': ['MA', 'PI', 'CE', 'RN', 'PB', 'PE', 'AL', 'SE', 'BA'],
-    'North': ['PA', 'AM', 'RR', 'AP', 'AC', 'RO', 'TO'],
-    'Center-West': ['MT', 'MS', 'GO', 'DF'],
-    'Southeast': ['SP', 'RJ', 'ES', 'MG'],
-    'South': ['PR', 'SC', 'RS'],
+  // Load Brazil GeoJSON
+  useEffect(() => {
+    const loadGeoJson = async () => {
+      try {
+        const response = await fetch(
+          'https://raw.githubusercontent.com/fititnt/gis-dataset-brasil/master/uf/geojson/uf.json'
+        );
+        const data = await response.json();
+        setGeoJsonData(data);
+      } catch (error) {
+        console.error('Error loading GeoJSON:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadGeoJson();
+  }, []);
+
+  const onEachFeature = (feature: any, layer: any) => {
+    const stateCode = feature.properties?.SIGLA;
+    const stateData = stateCode ? stateMap[stateCode] : null;
+
+    if (stateData) {
+      const popupContent = `
+        <div class="p-2">
+          <h3 class="font-bold text-sm">${stateData.state_name} (${stateCode})</h3>
+          <p class="text-xs text-gray-600">${stateData.region}</p>
+          <p class="text-lg font-bold mt-2">
+            <span style="color: ${sentimentToColor(stateData.avg_sentiment)}">
+              ${stateData.avg_sentiment}
+            </span>
+          </p>
+          <p class="text-xs">📊 ${stateData.mention_volume.toLocaleString('pt-BR')} menções</p>
+          <p class="text-xs font-semibold mt-1">Temas:</p>
+          <div class="flex gap-1 flex-wrap mt-1">
+            ${stateData.top_themes.slice(0, 3).map(theme => `<span class="text-xs bg-blue-100 text-blue-800 px-1 py-0.5 rounded">${theme}</span>`).join('')}
+          </div>
+        </div>
+      `;
+
+      layer.bindPopup(popupContent);
+
+      layer.on('click', () => {
+        onStateClick?.(stateCode);
+      });
+
+      layer.on('mouseover', () => {
+        layer.setStyle({
+          opacity: 1,
+          weight: 3,
+        });
+        layer.bringToFront();
+      });
+
+      layer.on('mouseout', () => {
+        geoJsonRef.current?.resetStyle(layer);
+      });
+    }
+  };
+
+  const style = (feature: any) => {
+    const stateCode = feature.properties?.SIGLA;
+    const stateData = stateCode ? stateMap[stateCode] : null;
+    const isSelected = selectedState === stateCode;
+
+    return {
+      fillColor: stateData ? sentimentToColor(stateData.avg_sentiment) : '#e5e7eb',
+      weight: isSelected ? 3 : 1,
+      opacity: 1,
+      color: isSelected ? '#2563eb' : '#ffffff',
+      dashArray: '',
+      fillOpacity: isSelected ? 0.95 : 0.7,
+    };
   };
 
   return (
     <div className="w-full bg-white rounded-lg shadow p-6">
       <h3 className="text-lg font-semibold text-gray-900 mb-4">🗺️ Mapa de Sentimento por Estado</h3>
 
-      <div className="space-y-6">
-        {Object.entries(regions).map(([region, codes]) => (
-          <div key={region}>
-            <h4 className="text-sm font-semibold text-gray-700 mb-2">{region}</h4>
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2">
-              {codes.map(code => {
-                const stateData = stateMap[code];
-                const isSelected = selectedState === code;
-                return (
-                  <button
-                    key={code}
-                    onClick={() => onStateClick && onStateClick(code)}
-                    title={stateData ? `${stateData.state_name}: ${stateData.avg_sentiment}` : code}
-                    className={`
-                      p-3 rounded-lg border-2 transition-all cursor-pointer text-sm font-semibold
-                      ${isSelected ? 'border-blue-600 ring-2 ring-blue-300' : 'border-gray-200 hover:border-gray-400'}
-                      ${stateData ? sentimentToBgStyle(stateData.avg_sentiment) : 'bg-gray-100 hover:bg-gray-200'}
-                    `}
-                  >
-                    <div className="text-xs text-gray-600">{code}</div>
-                    {stateData && (
-                      <div className="text-lg font-bold text-gray-900">{stateData.avg_sentiment}</div>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-12 bg-gray-50 rounded">
+          <div className="text-gray-500 text-center">
+            <div className="animate-spin mb-2">⏳</div>
+            Carregando mapa...
           </div>
-        ))}
-      </div>
+        </div>
+      ) : geoJsonData ? (
+        <div className="relative rounded-lg overflow-hidden" style={{ height: '500px' }}>
+          <MapContainer
+            center={[-10.3, -55.5]}
+            zoom={4}
+            style={{ width: '100%', height: '100%' }}
+            className="rounded-lg"
+          >
+            <TileLayer
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+            <GeoJSON
+              data={geoJsonData}
+              style={style}
+              onEachFeature={onEachFeature}
+              ref={geoJsonRef}
+            />
+          </MapContainer>
+        </div>
+      ) : (
+        <div className="flex items-center justify-center py-12 bg-gray-50 rounded">
+          <p className="text-gray-500">Erro ao carregar o mapa</p>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="mt-6 pt-6 border-t border-gray-200">
         <p className="text-sm font-semibold text-gray-700 mb-3">Escala de Sentimento</p>
         <div className="flex flex-wrap gap-3">
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-red-600 rounded"></div>
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#dc2626' }}></div>
             <span className="text-sm text-gray-600">Muito Negativo (-1.0)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-red-400 rounded"></div>
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#f87171' }}></div>
             <span className="text-sm text-gray-600">Negativo</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-yellow-400 rounded"></div>
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#fbbf24' }}></div>
             <span className="text-sm text-gray-600">Neutro (0.0)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-lime-400 rounded"></div>
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#84cc16' }}></div>
             <span className="text-sm text-gray-600">Positivo</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-green-500 rounded"></div>
+            <div className="w-6 h-6 rounded" style={{ backgroundColor: '#22c55e' }}></div>
             <span className="text-sm text-gray-600">Muito Positivo (+1.0)</span>
           </div>
         </div>
       </div>
 
-      {/* Selected state details */}
+      {/* Selected State Info */}
       {selectedState && stateMap[selectedState] && (
-        <div className="mt-6 pt-6 border-t border-gray-200 bg-blue-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+        <div className="mt-6 pt-6 border-t border-gray-200 bg-blue-50 rounded-lg p-4">
           <div className="flex items-between justify-between">
             <div>
               <h3 className="font-semibold text-lg text-gray-900">
@@ -121,20 +191,19 @@ export function BrazilMap({ states, onStateClick, selectedState }: BrazilMapProp
               <p className="text-sm text-gray-600">{stateMap[selectedState].region}</p>
             </div>
             <div className="text-right">
-              <div className={`text-2xl font-bold ${
-                (stateMap[selectedState].avg_sentiment as number) > 0 ? 'text-green-600' :
-                (stateMap[selectedState].avg_sentiment as number) < 0 ? 'text-red-600' :
-                'text-yellow-600'
-              }`}>
+              <div
+                className="text-2xl font-bold"
+                style={{ color: sentimentToColor(stateMap[selectedState].avg_sentiment) }}
+              >
                 {stateMap[selectedState].avg_sentiment}
               </div>
-              <p className="text-sm text-gray-600">{stateMap[selectedState].mention_volume} menções</p>
+              <p className="text-sm text-gray-600">{stateMap[selectedState].mention_volume.toLocaleString('pt-BR')} menções</p>
             </div>
           </div>
           {stateMap[selectedState].top_themes && (
             <div className="mt-3">
               <p className="text-sm font-semibold text-gray-700">Temas principais:</p>
-              <div className="flex gap-2 mt-1">
+              <div className="flex gap-2 mt-1 flex-wrap">
                 {stateMap[selectedState].top_themes.map(theme => (
                   <span key={theme} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
                     {theme}
