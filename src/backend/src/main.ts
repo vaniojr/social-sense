@@ -132,12 +132,12 @@ app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
 
     // Calculate statistics
     const states = result.rows;
-    const sentiments = states.map((s: any) => s.avg_sentiment);
+    const sentiments = states.map((s: any) => typeof s.avg_sentiment === 'string' ? parseFloat(s.avg_sentiment) : s.avg_sentiment);
     const bestState = states[0] || null;
     const worstState = states[states.length - 1] || null;
     const avgSentiment = sentiments.length > 0
       ? sentiments.reduce((a: number, b: number) => a + b, 0) / sentiments.length
-      : 0;
+      : null;
 
     res.json({
       states,
@@ -145,7 +145,7 @@ app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
       statistics: {
         best_state: bestState,
         worst_state: worstState,
-        average_sentiment: Math.round(avgSentiment * 100) / 100,
+        average_sentiment: avgSentiment !== null ? Math.round(avgSentiment * 100) / 100 : null,
       },
       timestamp: new Date(),
     });

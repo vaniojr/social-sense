@@ -39,7 +39,8 @@ export function GeoAnalysis() {
   const [selectedCandidateId, setSelectedCandidateId] = useState<string>('');
   const [states, setStates] = useState<StateData[]>([]);
   const [selectedState, setSelectedState] = useState<string | undefined>();
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
+  const [loadingCandidates, setLoadingCandidates] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statistics, setStatistics] = useState<RegionalSentimentResponse['statistics'] | null>(null);
 
@@ -59,6 +60,8 @@ export function GeoAnalysis() {
       } catch (err) {
         console.error('Error loading candidates:', err);
         setError('Erro ao carregar candidatos');
+      } finally {
+        setLoadingCandidates(false);
       }
     };
 
@@ -80,12 +83,13 @@ export function GeoAnalysis() {
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load regional sentiment');
         const data: RegionalSentimentResponse = await response.json();
-        setStates(data.states);
-        setStatistics(data.statistics);
-        setSelectedState(undefined); // Reset selected state when candidate changes
+        setStates(data.states || []);
+        setStatistics(data.statistics || null);
+        setSelectedState(undefined);
       } catch (err) {
         console.error('Error loading regional sentiment:', err);
         setError('Erro ao carregar dados regionais');
+        setStates([]);
       } finally {
         setLoading(false);
       }
@@ -98,8 +102,8 @@ export function GeoAnalysis() {
   const stateDetails = selectedState ? states.find(s => s.state_code === selectedState) : null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-slate-50 pt-8 pb-8">
+      <div className="max-w-7xl mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">🗺️ Análise Geográfica</h1>
@@ -112,9 +116,10 @@ export function GeoAnalysis() {
           <select
             value={selectedCandidateId}
             onChange={e => setSelectedCandidateId(e.target.value)}
-            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            disabled={loadingCandidates}
+            className="w-full md:w-64 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
           >
-            <option value="">Carregando...</option>
+            {loadingCandidates && <option>Carregando...</option>}
             {candidates.map(candidate => (
               <option key={candidate.id} value={candidate.id}>
                 {candidate.name} ({candidate.category})
@@ -129,16 +134,21 @@ export function GeoAnalysis() {
           </div>
         )}
 
-        {loading ? (
-          <div className="flex items-center justify-center h-96 bg-white rounded-lg">
-            <div className="text-gray-500">Carregando dados...</div>
+        {loading && (
+          <div className="flex items-center justify-center py-12 bg-white rounded-lg">
+            <div className="text-gray-500 text-center">
+              <div className="animate-spin mb-2">⏳</div>
+              Carregando dados...
+            </div>
           </div>
-        ) : (
+        )}
+
+        {!loading && states.length > 0 && (
           <>
-            {/* Main Grid */}
+            {/* Main Layout */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-              {/* Map Section */}
-              <div className="lg:col-span-2">
+              {/* Map Section - Wider on desktop */}
+              <div className="lg:col-span-2 bg-white rounded-lg shadow p-6">
                 <BrazilMap
                   states={states}
                   onStateClick={setSelectedState}
@@ -152,75 +162,57 @@ export function GeoAnalysis() {
 
                 {selectedCandidate && (
                   <div className="mb-6 pb-6 border-b border-gray-200">
-                    <p className="text-sm text-gray-600 mb-1">Candidato selecionado:</p>
+                    <p className="text-sm text-gray-600 mb-1">Candidato:</p>
                     <p className="text-lg font-semibold text-gray-900">{selectedCandidate.name}</p>
+                    <p className="text-xs text-gray-500">{selectedCandidate.category}</p>
                   </div>
                 )}
 
                 {statistics && (
-                  <>
-                    <div className="mb-6">
-                      <p className="text-sm text-gray-600 mb-1">Melhor desempenho</p>
+                  <div className="space-y-6">
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Melhor estado</p>
                       {statistics.best_state ? (
-                        <div>
-                          <p className="text-lg font-semibold text-green-600">
-                            {statistics.best_state.state_name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {statistics.best_state.avg_sentiment}
-                          </p>
+                        <div className="bg-green-50 rounded p-3 border border-green-200">
+                          <p className="font-semibold text-green-900">{statistics.best_state.state_name}</p>
+                          <p className="text-2xl font-bold text-green-600">{statistics.best_state.avg_sentiment}</p>
                         </div>
                       ) : (
-                        <p className="text-gray-500">-</p>
+                        <p className="text-gray-400">-</p>
                       )}
                     </div>
 
-                    <div className="mb-6">
-                      <p className="text-sm text-gray-600 mb-1">Pior desempenho</p>
+                    <div>
+                      <p className="text-sm text-gray-600 mb-2">Pior estado</p>
                       {statistics.worst_state ? (
-                        <div>
-                          <p className="text-lg font-semibold text-red-600">
-                            {statistics.worst_state.state_name}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {statistics.worst_state.avg_sentiment}
-                          </p>
+                        <div className="bg-red-50 rounded p-3 border border-red-200">
+                          <p className="font-semibold text-red-900">{statistics.worst_state.state_name}</p>
+                          <p className="text-2xl font-bold text-red-600">{statistics.worst_state.avg_sentiment}</p>
                         </div>
                       ) : (
-                        <p className="text-gray-500">-</p>
+                        <p className="text-gray-400">-</p>
                       )}
                     </div>
-
-                    {statistics.average_sentiment !== null && (
-                      <div>
-                        <p className="text-sm text-gray-600 mb-1">Sentimento médio nacional</p>
-                        <p className="text-2xl font-bold text-blue-600">
-                          {statistics.average_sentiment?.toFixed(2)}
-                        </p>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
 
                 {stateDetails && (
                   <div className="mt-6 pt-6 border-t border-gray-200">
-                    <p className="text-sm text-gray-600 mb-2">Detalhes do estado selecionado:</p>
-                    <div className="bg-blue-50 rounded p-3">
-                      <p className="font-semibold text-gray-900">{stateDetails.state_name}</p>
-                      <p className="text-sm text-gray-600">{stateDetails.region}</p>
-                      <div className="mt-2">
-                        <span className={`inline-block px-2 py-1 rounded text-sm font-semibold ${
-                          typeof stateDetails.avg_sentiment === 'number'
-                            ? stateDetails.avg_sentiment > 0
-                              ? 'bg-green-100 text-green-800'
-                              : stateDetails.avg_sentiment < 0
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                            : 'bg-gray-100 text-gray-800'
+                    <p className="text-sm text-gray-600 mb-3 font-semibold">Estado Selecionado</p>
+                    <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <p className="font-bold text-lg text-gray-900">{stateDetails.state_name} ({stateDetails.state_code})</p>
+                      <p className="text-sm text-gray-600 mb-3">{stateDetails.region}</p>
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-semibold">Sentimento:</span>
+                        <span className={`text-2xl font-bold ${
+                          (stateDetails.avg_sentiment as number) > 0 ? 'text-green-600' :
+                          (stateDetails.avg_sentiment as number) < 0 ? 'text-red-600' :
+                          'text-yellow-600'
                         }`}>
                           {stateDetails.avg_sentiment}
                         </span>
                       </div>
+                      <p className="text-xs text-gray-500">{stateDetails.mention_volume} menções</p>
                     </div>
                   </div>
                 )}
@@ -228,7 +220,7 @@ export function GeoAnalysis() {
             </div>
 
             {/* Ranking Table */}
-            <div>
+            <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">📈 Ranking de Estados</h2>
               <StateRankingTable
                 states={states}
@@ -237,6 +229,12 @@ export function GeoAnalysis() {
               />
             </div>
           </>
+        )}
+
+        {!loading && states.length === 0 && !error && (
+          <div className="bg-white rounded-lg shadow p-12 text-center">
+            <p className="text-gray-500">Nenhum dado disponível</p>
+          </div>
         )}
       </div>
     </div>
