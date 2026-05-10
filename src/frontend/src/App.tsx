@@ -2,6 +2,7 @@ import { RouterProvider, createBrowserRouter, Outlet, Link, useLocation } from '
 import { EntityProvider, useEntity } from './context/EntityContext'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
+import { NewsPage } from './pages/NewsPage'
 import { ChatWidget } from './components/ChatWidget'
 
 function Navigation() {
@@ -35,6 +36,16 @@ function Navigation() {
               }`}
             >
               🗺️ Análise Geográfica
+            </Link>
+            <Link
+              to="/news"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/news'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              📰 Notícias
             </Link>
             <div className="ml-6 border-l border-gray-200 pl-6">
               <label className="text-xs font-semibold text-gray-600 block mb-1">Entidade</label>
@@ -82,6 +93,10 @@ const router = createBrowserRouter([
       {
         path: '/geo',
         element: <GeoAnalysis />,
+      },
+      {
+        path: '/news',
+        element: <NewsPage />,
       },
     ],
   },

@@ -27,10 +27,12 @@ interface RegionalSentimentResponse {
 
 interface Alert {
   id: string;
-  level: 'crítico' | 'atenção' | 'info';
+  severity: 'low' | 'medium' | 'high' | 'critical';
   title: string;
   description: string;
-  timestamp: string;
+  alert_type: string;
+  triggered_at: string;
+  is_active: boolean;
 }
 
 function sentimentToColor(score: number | string): string {
@@ -43,33 +45,10 @@ function sentimentToColor(score: number | string): string {
   return '#22c55e';
 }
 
-const MOCK_ALERTS: Alert[] = [
-  {
-    id: '1',
-    level: 'crítico',
-    title: 'Rio Grande do Sul',
-    description: 'Sentimento abaixo de -0.40',
-    timestamp: '2m atrás',
-  },
-  {
-    id: '2',
-    level: 'atenção',
-    title: 'Bahia',
-    description: 'Sentimento caiu 0.15 pontos',
-    timestamp: '15m atrás',
-  },
-  {
-    id: '3',
-    level: 'info',
-    title: 'São Paulo',
-    description: 'Melhor desempenho: +0.72',
-    timestamp: '1h atrás',
-  },
-];
-
 export function Dashboard() {
   const { selectedId, selected } = useEntity();
   const [data, setData] = useState<RegionalSentimentResponse | null>(null);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [geoJsonData, setGeoJsonData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
@@ -107,6 +86,15 @@ export function Dashboard() {
           firstState: result.states?.[0]
         });
         setData(result);
+
+        // Fetch alerts
+        const alertsUrl = `${apiUrl}/api/alerts?entityId=${selectedId}&limit=5`;
+        const alertsResponse = await fetch(alertsUrl);
+        if (alertsResponse.ok) {
+          const alertsData = await alertsResponse.json();
+          setAlerts(alertsData.alerts || []);
+          console.log('✅ Dashboard: Alerts loaded', { count: alertsData.alerts?.length || 0 });
+        }
       } catch (error) {
         console.error('❌ Dashboard: Error loading data:', error);
       } finally {
@@ -289,23 +277,26 @@ export function Dashboard() {
               <div className="bg-white rounded-lg shadow p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">🔔 Alertas Recentes</h2>
                 <div className="space-y-3">
-                  {MOCK_ALERTS.map(alert => (
-                    <div key={alert.id} className="pb-3 border-b border-gray-200 last:border-b-0">
-                      <div className="flex items-start gap-3">
-                        <span className="text-xl">
-                          {alert.level === 'crítico' ? '🔴' : alert.level === 'atenção' ? '🟡' : '🟢'}
-                        </span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-gray-900">{alert.title}</p>
-                          <p className="text-xs text-gray-600 mt-1">{alert.description}</p>
-                          <p className="text-xs text-gray-400 mt-2">{alert.timestamp}</p>
+                  {alerts.length > 0 ? (
+                    alerts.map(alert => (
+                      <div key={alert.id} className="pb-3 border-b border-gray-200 last:border-b-0">
+                        <div className="flex items-start gap-3">
+                          <span className="text-xl">
+                            {alert.severity === 'critical' ? '🔴' : alert.severity === 'high' ? '🔴' : alert.severity === 'medium' ? '🟡' : '🟢'}
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-gray-900">{alert.title}</p>
+                            <p className="text-xs text-gray-600 mt-1">{alert.description}</p>
+                            <p className="text-xs text-gray-400 mt-2">
+                              {new Date(alert.triggered_at).toLocaleString('pt-BR')}
+                            </p>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <div className="pt-3 text-xs text-gray-400 font-semibold">
-                    Demo • Dados mock
-                  </div>
+                    ))
+                  ) : (
+                    <p className="text-xs text-gray-400">Nenhum alerta</p>
+                  )}
                 </div>
               </div>
             </div>
