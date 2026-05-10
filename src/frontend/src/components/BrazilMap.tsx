@@ -60,7 +60,7 @@ export function BrazilMap({ states, onStateClick, selectedState }: BrazilMapProp
   }, []);
 
   const onEachFeature = (feature: any, layer: any) => {
-    const stateCode = feature.properties?.SIGLA;
+    const stateCode = feature.properties?.UF_05;
     const stateData = stateCode ? stateMap[stateCode] : null;
 
     if (stateData) {
@@ -102,7 +102,7 @@ export function BrazilMap({ states, onStateClick, selectedState }: BrazilMapProp
   };
 
   const style = (feature: any) => {
-    const stateCode = feature.properties?.SIGLA;
+    const stateCode = feature.properties?.UF_05;
     const stateData = stateCode ? stateMap[stateCode] : null;
     const isSelected = selectedState === stateCode;
 

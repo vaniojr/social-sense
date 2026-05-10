@@ -242,10 +242,10 @@ export function Dashboard() {
                           key={`geojson-${data.timestamp}`}
                           data={geoJsonData}
                           style={(feature: any) => {
-                            const code = feature.properties?.SIGLA;
+                            const code = feature.properties?.UF_05;
                             const state = data.states?.find(s => s.state_code === code);
                             const color = state ? sentimentToColor(state.avg_sentiment) : '#e5e7eb';
-                            console.log(`🎨 Styling state ${code}: ${state?.state_name || 'NO DATA'} = ${color}`);
+                            if (state) console.log(`🎨 Styling state ${code}: ${state?.state_name} = ${color}`);
                             return {
                               fillColor: color,
                               weight: 1,
@@ -255,7 +255,7 @@ export function Dashboard() {
                             };
                           }}
                           onEachFeature={(feature: any, layer: any) => {
-                            const code = feature.properties?.SIGLA;
+                            const code = feature.properties?.UF_05;
                             const state = data.states?.find(s => s.state_code === code);
                             if (state) {
                               layer.bindPopup(`
