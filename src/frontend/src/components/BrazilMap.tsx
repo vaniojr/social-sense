@@ -39,15 +39,15 @@ export function BrazilMap({ states, onStateClick, selectedState }: BrazilMapProp
     return acc;
   }, {} as Record<string, StateData>);
 
-  // Load Brazil GeoJSON
+  // Load Brazil GeoJSON from local file
   useEffect(() => {
     const loadGeoJson = async () => {
       try {
-        const response = await fetch(
-          'https://raw.githubusercontent.com/fititnt/gis-dataset-brasil/master/uf/geojson/uf.json'
-        );
+        const response = await fetch('/data/brasil-states.json');
+        if (!response.ok) throw new Error('Failed to load local GeoJSON');
         const data = await response.json();
         setGeoJsonData(data);
+        console.log('✅ GeoJSON loaded from local file');
       } catch (error) {
         console.error('Error loading GeoJSON:', error);
       } finally {
