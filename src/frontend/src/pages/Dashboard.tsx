@@ -97,14 +97,19 @@ export function Dashboard() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const response = await fetch(
-          `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`
-        );
+        const url = `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`;
+        console.log('📊 Dashboard: Fetching sentiment data from:', url);
+        const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load data');
         const result = await response.json();
+        console.log('✅ Dashboard: Data loaded successfully', {
+          statesCount: result.states?.length,
+          hasTimestamp: !!result.timestamp,
+          firstState: result.states?.[0]
+        });
         setData(result);
       } catch (error) {
-        console.error('Error loading dashboard data:', error);
+        console.error('❌ Dashboard: Error loading data:', error);
       } finally {
         setLoading(false);
       }
@@ -232,20 +237,37 @@ export function Dashboard() {
                         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                       />
-                      {data && (
+                      {data && geoJsonData && (
                         <GeoJSON
                           key={`geojson-${data.timestamp}`}
                           data={geoJsonData}
                           style={(feature: any) => {
                             const code = feature.properties?.SIGLA;
-                            const state = data.states.find(s => s.state_code === code);
+                            const state = data.states?.find(s => s.state_code === code);
+                            const color = state ? sentimentToColor(state.avg_sentiment) : '#e5e7eb';
+                            console.log(`🎨 Styling state ${code}: ${state?.state_name || 'NO DATA'} = ${color}`);
                             return {
-                              fillColor: state ? sentimentToColor(state.avg_sentiment) : '#e5e7eb',
+                              fillColor: color,
                               weight: 1,
                               opacity: 1,
                               color: '#ffffff',
                               fillOpacity: 0.7,
                             };
+                          }}
+                          onEachFeature={(feature: any, layer: any) => {
+                            const code = feature.properties?.SIGLA;
+                            const state = data.states?.find(s => s.state_code === code);
+                            if (state) {
+                              layer.bindPopup(`
+                                <div class="p-2">
+                                  <h3 class="font-bold text-sm">${state.state_name} (${code})</h3>
+                                  <p class="text-lg font-bold" style="color: ${sentimentToColor(state.avg_sentiment)}">
+                                    ${state.avg_sentiment}
+                                  </p>
+                                  <p class="text-xs">📊 ${state.mention_volume.toLocaleString('pt-BR')} menções</p>
+                                </div>
+                              `);
+                            }
                           }}
                         />
                       )}
