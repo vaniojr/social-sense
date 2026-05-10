@@ -529,6 +529,23 @@ Cite números e regiões quando relevante.`;
   }
 });
 
+// DEBUG: Clear all news articles (development only)
+app.post('/api/admin/clear-news', async (req: Request, res: Response) => {
+  if (process.env.NODE_ENV !== 'development') {
+    res.status(403).json({ error: 'Only available in development' });
+    return;
+  }
+  try {
+    await pool.query('DELETE FROM sentiment_scores WHERE article_id IS NOT NULL');
+    const result = await pool.query('DELETE FROM news_articles');
+    console.log(`🗑️  Cleared ${result.rowCount} articles and sentiment scores`);
+    res.json({ cleared: result.rowCount });
+  } catch (error) {
+    console.error('Error clearing news:', error);
+    res.status(500).json({ error: 'Failed to clear news' });
+  }
+});
+
 // Root endpoint
 app.get('/', (req: Request, res: Response) => {
   res.json({
