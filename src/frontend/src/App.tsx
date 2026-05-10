@@ -2,6 +2,7 @@ import { RouterProvider, createBrowserRouter, Outlet, Link, useLocation } from '
 import { EntityProvider, useEntity } from './context/EntityContext'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
+import { ChatWidget } from './components/ChatWidget'
 
 function Navigation() {
   const location = useLocation()
@@ -64,6 +65,7 @@ function Layout() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <Outlet />
+      <ChatWidget />
     </div>
   )
 }

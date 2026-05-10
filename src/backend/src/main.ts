@@ -2,8 +2,12 @@ import express, { Express, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { Pool } from 'pg';
+import Anthropic from '@anthropic-ai/sdk';
 
 dotenv.config();
+
+// Initialize Claude API client
+const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
@@ -174,20 +178,109 @@ app.get('/api/sentiment/:entityId', async (req: Request, res: Response) => {
   }
 });
 
-// Chat endpoint (placeholder)
+// Chat endpoint with Claude AI integration
 app.post('/api/chat', async (req: Request, res: Response) => {
   try {
-    const { message, entityId } = req.body;
+    const { entityId, message, conversationId } = req.body;
 
-    // TODO: Implement Claude API integration
-    const response = `Echo: ${message}`;
+    // Validate inputs
+    if (!entityId || !message) {
+      res.status(400).json({ error: 'Missing entityId or message' });
+      return;
+    }
+
+    // 1. Fetch entity data
+    const entityResult = await pool.query(
+      'SELECT name, type FROM entities WHERE id = $1',
+      [entityId]
+    );
+    if (entityResult.rows.length === 0) {
+      res.status(404).json({ error: 'Entity not found' });
+      return;
+    }
+    const entity = entityResult.rows[0];
+
+    // 2. Fetch regional sentiment for context
+    const sentimentResult = await pool.query(
+      `SELECT state_name, region, avg_sentiment, mention_volume, top_themes
+       FROM regional_sentiment_aggregated
+       WHERE entity_id = $1
+       ORDER BY mention_volume DESC
+       LIMIT 5`,
+      [entityId]
+    );
+    const sentimentContext = sentimentResult.rows.length > 0
+      ? sentimentResult.rows
+          .map(s => `${s.state_name} (${s.region}): sentimento ${s.avg_sentiment}, ${s.mention_volume} menções`)
+          .join('\n')
+      : 'Dados de sentimento ainda não disponíveis.';
+
+    // 3. Load conversation history if conversationId provided
+    let history: { role: 'user' | 'assistant'; content: string }[] = [];
+    let convId = conversationId;
+
+    if (conversationId) {
+      const convResult = await pool.query(
+        'SELECT messages FROM chat_conversations WHERE id = $1 AND entity_id = $2',
+        [conversationId, entityId]
+      );
+      if (convResult.rows.length > 0 && convResult.rows[0].messages) {
+        history = convResult.rows[0].messages;
+      }
+    }
+
+    // 4. Call Claude API with context
+    const systemPrompt = `Você é o AI Copilot do Social Sense, plataforma de inteligência de reputação.
+Você está analisando dados de opinião pública para: ${entity.name} (${entity.type}).
+
+Dados regionais atuais (top 5 por volume):
+${sentimentContext}
+
+Responda em português brasileiro. Seja conciso e estratégico.
+Foque em insights acionáveis sobre sentimento, tendências, riscos e recomendações.
+Cite números e regiões quando relevante.`;
+
+    console.log(`💬 Chat: Processing message for ${entity.name}...`);
+
+    const claudeResponse = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: systemPrompt,
+      messages: [...history, { role: 'user', content: message }],
+    });
+
+    const responseText = claudeResponse.content[0].type === 'text'
+      ? claudeResponse.content[0].text
+      : 'Não foi possível gerar resposta.';
+
+    // 5. Update message history
+    const updatedHistory = [
+      ...history,
+      { role: 'user', content: message },
+      { role: 'assistant', content: responseText },
+    ];
+
+    // 6. Save/update conversation in database
+    if (convId) {
+      await pool.query(
+        'UPDATE chat_conversations SET messages = $1, updated_at = NOW() WHERE id = $2',
+        [JSON.stringify(updatedHistory), convId]
+      );
+    } else {
+      const newConv = await pool.query(
+        'INSERT INTO chat_conversations (entity_id, messages) VALUES ($1, $2) RETURNING id',
+        [entityId, JSON.stringify(updatedHistory)]
+      );
+      convId = newConv.rows[0].id;
+    }
 
     res.json({
-      message: response,
-      source: 'claude',
+      response: responseText,
+      conversationId: convId,
+      timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error('Error in chat:', error);
+    console.error('❌ Error in chat endpoint:', error);
     res.status(500).json({ error: 'Failed to process chat message' });
   }
 });
