@@ -103,6 +103,10 @@ export function Dashboard() {
     };
 
     loadData();
+
+    // Poll for updates every 30 seconds to reflect news fetch changes
+    const interval = setInterval(loadData, 30000);
+    return () => clearInterval(interval);
   }, [selectedId, apiUrl]);
 
   const topBest = data?.states?.slice(0, 5) || [];

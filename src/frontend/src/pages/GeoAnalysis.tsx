@@ -66,6 +66,10 @@ export function GeoAnalysis() {
     loadRegionalSentiment().then(() => {
       console.log('✅ Regional sentiment loaded successfully');
     });
+
+    // Poll for updates every 30 seconds to reflect news fetch changes
+    const interval = setInterval(loadRegionalSentiment, 30000);
+    return () => clearInterval(interval);
   }, [selectedId, apiUrl]);
 
   const stateDetails = selectedState ? states.find(s => s.state_code === selectedState) : null;
