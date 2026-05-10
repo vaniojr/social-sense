@@ -142,10 +142,19 @@ GitHub Actions (schedule: daily 6 AM)
     ├─→ Store in database (news_articles table)
     │
     ├─→ Backend processes each article:
-    │   ├─ Claude API: Analyze sentiment
-    │   ├─ Extract topics/themes
-    │   ├─ Extract location (if mentioned)
-    │   ├─ Calculate regional impact
+    │   ├─ Stage 1 (Claude API): Identify sentiment direction (POSITIVO/NEGATIVO/NEUTRO)
+    │   │   ├─ Chain-of-thought reasoning with keyword detection
+    │   │   └─ Few-shot examples for Brazilian context
+    │   │
+    │   ├─ Stage 2 (Claude API): Quantify intensity & extract features
+    │   │   ├─ Sentiment scale: -1.0 (harsh) to 1.0 (strong praise), 0.0 (neutral)
+    │   │   ├─ Theme extraction: política, economia, saúde, corrupção, etc.
+    │   │   └─ Region extraction: Brazilian state codes or null
+    │   │
+    │   ├─ Validation & fallback:
+    │   │   ├─ Validate response format (number, array, string|null)
+    │   │   └─ Fallback to keyword detection if Claude fails
+    │   │
     │   └─ Trigger alerts if sentiment drops
     │
     ├─→ Update sentiment_scores with new data
@@ -207,7 +216,7 @@ New sentiment data arrives
 | **Backend** | Node.js/Express OR Python/FastAPI | Both have excellent Claude SDK support; choose based on team expertise |
 | **Database** | PostgreSQL | Open-source, powerful, PostGIS for geographic queries |
 | **Deployment** | Vercel + Railway | Vercel for frontend (fast edge deployment), Railway for backend (PostgreSQL included) |
-| **AI Analysis** | Claude API | Best reasoning for nuanced sentiment analysis; supports streaming |
+| **AI Analysis** | Claude Sonnet 4-6 | Best reasoning for nuanced sentiment analysis; 2-stage system for accuracy; supports streaming |
 | **Data Collection** | GitHub Actions + scripts | Free, scheduled, no external automation platform needed |
 | **Monitoring** | Sentry + GitHub Actions logs | Error tracking + deployment visibility |
 
@@ -232,6 +241,12 @@ New sentiment data arrives
 - **Source 2:** RSS feeds from major Brazilian news outlets
 - **Processing:** GitHub Actions scheduled job (hourly)
 - **Storage:** `news_articles` table with sentiment analysis
+- **Sentiment Analysis (v2 - 2-Stage System, 2026-05-10):**
+  - **Stage 1:** Chain-of-thought identification of sentiment direction (POSITIVO/NEGATIVO/NEUTRO)
+  - **Stage 2:** Quantification of intensity (-1.0 to 1.0 scale) + theme/region extraction
+  - **Model:** Claude Sonnet 4-6 (upgraded from Haiku for better accuracy)
+  - **Features:** Few-shot learning with Brazilian examples, validation layer with keyword fallback
+  - **Result:** Correctly identifies negative sentiment in accusation/scandal articles (e.g., "Robinho Jr. acusa Neymar de agressão" now returns -0.5 instead of 0.0)
 
 ### 🚨 Smart Alerts
 - **Triggers:** Sentiment drop, volume spike, attack patterns

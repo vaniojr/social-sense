@@ -197,6 +197,114 @@ app.get('/api/sentiment/:entityId', async (req: Request, res: Response) => {
 });
 
 // News Aggregation endpoints
+// Helper function for 2-stage sentiment analysis with validation and retry
+async function analyzeSentiment(article: any, entity: any): Promise<{ sentiment_score: number; themes: string[]; region: string | null }> {
+  const defaultResult = { sentiment_score: 0, themes: [], region: null };
+
+  try {
+    // Stage 1: Identify sentiment direction (positive/negative/neutral) using chain-of-thought
+    const stage1Prompt = `Você é especialista em análise de sentimento para mídia brasileira.
+
+TAREFA: Identificar se esta notícia é POSITIVA, NEGATIVA ou NEUTRA em relação a ${entity.name}.
+
+Título: ${article.title}
+Descrição: ${article.description || ''}
+
+EXEMPLOS DE REFERÊNCIA:
+1. "Neymar eleito Melhor Jogador do Ano" → POSITIVO (elogio, reconhecimento)
+2. "Robinho Jr. acusa Neymar de agressão" → NEGATIVO (acusação, escândalo)
+3. "Neymar marca 2 gols em vitória do Brasil" → POSITIVO (sucesso, conquista)
+4. "Bolsonaro propõe novo programa social" → POSITIVO (se fala bem do programa)
+5. "Lula mantém isolamento após teste positivo para COVID" → NEGATIVO (saúde, crise)
+6. "São Paulo abre novas vagas de emprego" → NEUTRO (informação factual)
+
+PENSE PASSO A PASSO:
+- Há palavras-chave negativas? (acusa, denúncia, escândalo, crítica, problema, morte, conflito)
+- Há palavras-chave positivas? (elogia, sucesso, vitória, conquista, apoio, crescimento)
+- É apenas informação factual? (sem julgamento claro)
+
+RESPONDA APENAS COM:
+SENTIMENTO: POSITIVO | NEGATIVO | NEUTRO`;
+
+    const stage1Response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 100,
+      messages: [{ role: 'user', content: stage1Prompt }],
+    });
+
+    const stage1Text = stage1Response.content[0].type === 'text' ? stage1Response.content[0].text : '';
+    console.log(`📍 Stage 1 response: ${stage1Text}`);
+
+    // Extract sentiment direction
+    const directionMatch = stage1Text.match(/SENTIMENTO:\s*(POSITIVO|NEGATIVO|NEUTRO)/i);
+    const direction = directionMatch ? directionMatch[1].toUpperCase() : 'NEUTRO';
+
+    // Stage 2: Quantify intensity and extract themes/region
+    const stage2Prompt = `Você é especialista em análise de sentimento para mídia brasileira.
+
+TAREFA: Análise completa da notícia sobre ${entity.name}
+SENTIMENTO IDENTIFICADO: ${direction}
+
+Título: ${article.title}
+Descrição: ${article.description || ''}
+
+Se NEGATIVO: escala -1.0 (crítica leve) a -0.3 (crítica severa)
+Se POSITIVO: escala 0.3 (elogio leve) a 1.0 (elogio forte)
+Se NEUTRO: 0.0 (sem sentimento claro)
+
+Tema mencionado na notícia (máx 3): política, economia, saúde, educação, segurança, ambiente, esporte, corrupção, justiça, cultura
+Estado/Região mencionado (BR): SP, RJ, MG, BA, PE, CE, SC, RS, ou null se nacional
+
+RESPONDA COM JSON PURO (sem explicação, sem markdown):
+{"sentiment_score": <número entre -1.0 e 1.0>, "themes": ["tema1", "tema2"], "region": "UF ou null"}`;
+
+    const stage2Response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 200,
+      messages: [{ role: 'user', content: stage2Prompt }],
+    });
+
+    const stage2Text = stage2Response.content[0].type === 'text' ? stage2Response.content[0].text : '{}';
+    console.log(`📝 Stage 2 RAW response: [${stage2Text}]`);
+
+    const analysis = JSON.parse(stage2Text);
+    console.log(`✅ Stage 2 Parsed:`, JSON.stringify(analysis));
+
+    // Validate response
+    if (
+      typeof analysis.sentiment_score === 'number' &&
+      Array.isArray(analysis.themes) &&
+      (typeof analysis.region === 'string' || analysis.region === null)
+    ) {
+      return {
+        sentiment_score: Math.max(-1, Math.min(1, analysis.sentiment_score)), // Clamp to [-1, 1]
+        themes: analysis.themes.slice(0, 5), // Max 5 themes
+        region: analysis.region,
+      };
+    }
+
+    console.warn('⚠️  Invalid analysis response, retrying with simpler prompt...');
+    throw new Error('Invalid fields in response');
+  } catch (error) {
+    console.error(`⚠️  Sentiment analysis failed: ${(error as Error).message}, using keyword fallback`);
+
+    // Fallback: simple keyword detection
+    const text = `${article.title} ${article.description}`.toLowerCase();
+    const negativeKeywords = ['acusa', 'denúncia', 'escândalo', 'crítica', 'problema', 'morte', 'conflito', 'agressão', 'roubo', 'corrupção'];
+    const positiveKeywords = ['elogia', 'sucesso', 'vitória', 'conquista', 'apoio', 'crescimento', 'melhor', 'premiado'];
+
+    let sentiment = 0;
+    if (negativeKeywords.some(k => text.includes(k))) sentiment = -0.5;
+    else if (positiveKeywords.some(k => text.includes(k))) sentiment = 0.5;
+
+    return {
+      sentiment_score: sentiment,
+      themes: [],
+      region: null,
+    };
+  }
+}
+
 // Helper function to generate alerts based on sentiment
 async function generateAlerts(entityId: string, pool: Pool) {
   try {
@@ -336,42 +444,21 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
         newCount++;
         const articleId = insertResult.rows[0].id;
 
-        // 4. Analyze sentiment with Claude
-        let responseText = '{}';
+        // Analyze sentiment with 2-stage system
         try {
-          const claudeRes = await anthropic.messages.create({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 200,
-            messages: [{
-              role: 'user',
-              content: `Analise o sentimento desta notícia sobre ${entity.name}.
-
-Título: ${article.title}
-Descrição: ${article.description || ''}
-
-Responda APENAS com JSON válido (sem markdown, sem explicação):
-{"sentiment_score": <número de -1.0 a 1.0>, "themes": ["tema1", "tema2", "tema3"], "region": "<estado BR ou null>"}`,
-            }],
-          });
-
-          if (claudeRes.content && claudeRes.content[0]) {
-            responseText = claudeRes.content[0].type === 'text' ? claudeRes.content[0].text : '{}';
-            console.log(`📝 Claude response for "${article.title.substring(0, 40)}...":`, responseText.substring(0, 150));
-          }
-
-          const analysis = JSON.parse(responseText);
+          const analysis = await analyzeSentiment(article, entity);
           await pool.query(`
             INSERT INTO sentiment_scores (entity_id, article_id, sentiment_score, themes, state_code)
             VALUES ($1, $2, $3, $4, $5)
           `, [
             entityId,
             articleId,
-            analysis.sentiment_score || 0,
-            analysis.themes || [],  // Pass array directly, not JSON.stringify
-            analysis.region || null
+            analysis.sentiment_score,
+            analysis.themes,
+            analysis.region
           ]);
           analyzedCount++;
-
+          console.log(`✅ Article analyzed: "${article.title.substring(0, 40)}..." → sentiment=${analysis.sentiment_score}`);
         } catch (analysisError) {
           console.warn(`⚠️  Failed to analyze article "${article.title.substring(0, 30)}...":`, (analysisError as Error).message);
           await pool.query(
