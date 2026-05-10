@@ -33,6 +33,23 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Initialize database constraints on startup
+async function initializeDatabase() {
+  try {
+    await pool.query(`
+      ALTER TABLE news_articles
+      ADD CONSTRAINT unique_news_url UNIQUE (url)
+    `);
+    console.log('✅ Added UNIQUE constraint to news_articles.url');
+  } catch (err: any) {
+    if (err.message?.includes('already exists')) {
+      console.log('✅ UNIQUE constraint already exists on news_articles.url');
+    } else {
+      console.warn('⚠️  Could not add constraint:', err.message);
+    }
+  }
+}
+
 // Health check endpoint
 app.get('/api/health', async (req: Request, res: Response) => {
   try {
@@ -320,25 +337,29 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
         const articleId = insertResult.rows[0].id;
 
         // 4. Analyze sentiment with Claude
-        const claudeRes = await anthropic.messages.create({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 200,
-          messages: [{
-            role: 'user',
-            content: `Analise o sentimento desta notícia sobre ${entity.name}.
+        let responseText = '{}';
+        try {
+          const claudeRes = await anthropic.messages.create({
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 200,
+            messages: [{
+              role: 'user',
+              content: `Analise o sentimento desta notícia sobre ${entity.name}.
 
 Título: ${article.title}
 Descrição: ${article.description || ''}
 
 Responda APENAS com JSON válido (sem markdown, sem explicação):
 {"sentiment_score": <número de -1.0 a 1.0>, "themes": ["tema1", "tema2", "tema3"], "region": "<estado BR ou null>"}`,
-          }],
-        });
+            }],
+          });
 
-        try {
-          const responseText = claudeRes.content[0].type === 'text' ? claudeRes.content[0].text : '{}';
+          if (claudeRes.content && claudeRes.content[0]) {
+            responseText = claudeRes.content[0].type === 'text' ? claudeRes.content[0].text : '{}';
+            console.log(`📝 Claude response for "${article.title.substring(0, 40)}...":`, responseText.substring(0, 150));
+          }
+
           const analysis = JSON.parse(responseText);
-
           await pool.query(`
             INSERT INTO sentiment_scores (entity_id, article_id, sentiment_score, themes, state_code)
             VALUES ($1, $2, $3, $4, $5)
@@ -346,13 +367,13 @@ Responda APENAS com JSON válido (sem markdown, sem explicação):
             entityId,
             articleId,
             analysis.sentiment_score || 0,
-            JSON.stringify(analysis.themes || []),
+            analysis.themes || [],  // Pass array directly, not JSON.stringify
             analysis.region || null
           ]);
-
           analyzedCount++;
-        } catch (parseError) {
-          console.warn('Failed to parse Claude response, saving with score 0');
+
+        } catch (analysisError) {
+          console.warn(`⚠️  Failed to analyze article "${article.title.substring(0, 30)}...":`, (analysisError as Error).message);
           await pool.query(
             'INSERT INTO sentiment_scores (entity_id, article_id, sentiment_score) VALUES ($1, $2, $3)',
             [entityId, articleId, 0]
@@ -540,11 +561,20 @@ app.use((err: any, req: Request, res: Response, next: NextFunction) => {
 });
 
 // Start server
-app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
-  console.log(`📚 API documentation: http://localhost:${PORT}`);
-  console.log(`🔗 Frontend: http://localhost:3000`);
-  console.log(`🗄️  Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+async function start() {
+  await initializeDatabase();
+
+  app.listen(PORT, () => {
+    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`📚 API documentation: http://localhost:${PORT}`);
+    console.log(`🔗 Frontend: http://localhost:3000`);
+    console.log(`🗄️  Database: ${process.env.DB_HOST}:${process.env.DB_PORT}/${process.env.DB_NAME}`);
+  });
+}
+
+start().catch(err => {
+  console.error('❌ Failed to start server:', err);
+  process.exit(1);
 });
 
 // Graceful shutdown
