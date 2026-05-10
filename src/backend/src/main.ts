@@ -120,46 +120,67 @@ app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
 
     if (entityId) {
       query = `
+        WITH latest_sentiment AS (
+          SELECT
+            rsa.*,
+            e.name as entity_name,
+            ROW_NUMBER() OVER (PARTITION BY rsa.entity_id, rsa.state_code ORDER BY rsa.last_updated DESC) as rn
+          FROM regional_sentiment_aggregated rsa
+          JOIN entities e ON e.id = rsa.entity_id
+          WHERE rsa.entity_id = $1
+        )
         SELECT
-          rsa.state_code,
-          rsa.state_name,
-          rsa.region,
-          rsa.avg_sentiment,
-          rsa.mention_volume,
-          rsa.top_themes,
-          rsa.last_updated,
-          e.name as entity_name
-        FROM regional_sentiment_aggregated rsa
-        JOIN entities e ON e.id = rsa.entity_id
-        WHERE rsa.entity_id = $1
-        ORDER BY rsa.avg_sentiment DESC
+          state_code,
+          state_name,
+          region,
+          avg_sentiment,
+          mention_volume,
+          top_themes,
+          last_updated,
+          entity_name
+        FROM latest_sentiment
+        WHERE rn = 1
+        ORDER BY avg_sentiment DESC
       `;
       params.push(entityId as string);
     } else {
       query = `
+        WITH latest_sentiment AS (
+          SELECT
+            rsa.*,
+            ROW_NUMBER() OVER (PARTITION BY rsa.entity_id, rsa.state_code ORDER BY rsa.last_updated DESC) as rn
+          FROM regional_sentiment_aggregated rsa
+        )
         SELECT
-          rsa.state_code,
-          rsa.state_name,
-          rsa.region,
-          rsa.avg_sentiment,
-          rsa.mention_volume,
-          rsa.top_themes,
-          rsa.last_updated
-        FROM regional_sentiment_aggregated rsa
-        ORDER BY rsa.avg_sentiment DESC
+          state_code,
+          state_name,
+          region,
+          avg_sentiment,
+          mention_volume,
+          top_themes,
+          last_updated
+        FROM latest_sentiment
+        WHERE rn = 1
+        ORDER BY avg_sentiment DESC
       `;
     }
 
     const result = await pool.query(query, params);
 
-    // Calculate statistics
-    const states = result.rows;
+    // Calculate statistics - filter out NaN values
+    const states = result.rows.filter((s: any) => {
+      const sentiment = typeof s.avg_sentiment === 'string' ? parseFloat(s.avg_sentiment) : s.avg_sentiment;
+      return !isNaN(sentiment) && sentiment !== null;
+    });
+
     const sentiments = states.map((s: any) => typeof s.avg_sentiment === 'string' ? parseFloat(s.avg_sentiment) : s.avg_sentiment);
-    const bestState = states[0] || null;
-    const worstState = states[states.length - 1] || null;
+    const bestState = states.length > 0 ? states[0] : null;
+    const worstState = states.length > 0 ? states[states.length - 1] : null;
     const avgSentiment = sentiments.length > 0
       ? sentiments.reduce((a: number, b: number) => a + b, 0) / sentiments.length
       : null;
+
+    console.log(`📊 Regional sentiment: ${states.length} states, avg=${avgSentiment}`);
 
     res.json({
       states,
@@ -386,6 +407,12 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
   try {
     console.log(`🗺️ Aggregating regional sentiment for entity ${entityId}...`);
 
+    // Delete old aggregated data for this entity to prevent duplicates
+    await pool.query(
+      'DELETE FROM regional_sentiment_aggregated WHERE entity_id = $1',
+      [entityId]
+    );
+
     // Define Brazilian states with their regions
     const stateMap: { [key: string]: { region: string; state_name: string } } = {
       'SP': { region: 'Southeast', state_name: 'São Paulo' },
@@ -442,11 +469,6 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
       await pool.query(`
         INSERT INTO regional_sentiment_aggregated (entity_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
-        ON CONFLICT (entity_id, state_code) DO UPDATE SET
-          avg_sentiment = EXCLUDED.avg_sentiment,
-          mention_volume = EXCLUDED.mention_volume,
-          top_themes = EXCLUDED.top_themes,
-          last_updated = NOW()
       `, [
         entityId,
         stateInfo.region,
