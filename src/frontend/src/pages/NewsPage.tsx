@@ -114,10 +114,16 @@ export function NewsPage() {
 
   // Data for chart
   const chartData = [
-    { name: 'Muito Neg.', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) <= -1).length },
-    { name: 'Negativo', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) < -0.5 && (parseFloat(String(a.sentiment_score)) || 0) > -1).length },
-    { name: 'Neutro', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) >= -0.5 && (parseFloat(String(a.sentiment_score)) || 0) <= 0.5).length },
-    { name: 'Positivo', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) > 0.5).length },
+    { name: 'Muito Neg.', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) <= -0.7).length },
+    { name: 'Negativo', count: articles.filter(a => {
+      const score = parseFloat(String(a.sentiment_score)) || 0;
+      return score > -0.7 && score < -0.2;
+    }).length },
+    { name: 'Neutro', count: articles.filter(a => {
+      const score = parseFloat(String(a.sentiment_score)) || 0;
+      return score >= -0.2 && score <= 0.2;
+    }).length },
+    { name: 'Positivo', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) > 0.2).length },
   ];
 
   if (!selectedId) {

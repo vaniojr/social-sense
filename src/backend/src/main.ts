@@ -242,21 +242,56 @@ SENTIMENTO: POSITIVO | NEGATIVO | NEUTRO`;
     // Stage 2: Quantify intensity and extract themes/region
     const stage2Prompt = `Você é especialista em análise de sentimento para mídia brasileira.
 
-TAREFA: Análise completa da notícia sobre ${entity.name}
-SENTIMENTO IDENTIFICADO: ${direction}
+CONTEXTO: Analisar o sentimento de uma notícia em relação a ${entity.name}
+SENTIMENTO IDENTIFICADO NO PASSO ANTERIOR: ${direction}
 
 Título: ${article.title}
 Descrição: ${article.description || ''}
 
-Se NEGATIVO: escala -1.0 (crítica leve) a -0.3 (crítica severa)
-Se POSITIVO: escala 0.3 (elogio leve) a 1.0 (elogio forte)
-Se NEUTRO: 0.0 (sem sentimento claro)
+INSTRUÇÃO CRÍTICA: Use a ESCALA COMPLETA de -1.0 a 1.0, não apenas valores intermediários.
 
-Tema mencionado na notícia (máx 3): política, economia, saúde, educação, segurança, ambiente, esporte, corrupção, justiça, cultura
-Estado/Região mencionado (BR): SP, RJ, MG, BA, PE, CE, SC, RS, ou null se nacional
+TABELA DE REFERÊNCIA:
+┌─────────────────────────────────────────────────────────────────┐
+│ ESCALA COMPLETA DE SENTIMENTO (use TODO o intervalo)            │
+├─────────────────────────────────────────────────────────────────┤
+│ MUITO NEGATIVO (-1.0 a -0.7):                                    │
+│   -1.0 = Acusação gravíssima, crime, corrupção desmascarada     │
+│   -0.9 = Escândalo maior, crise existencial                     │
+│   -0.8 = Crítica severa, problema grave documentado             │
+│   -0.7 = Problema significativo, falha importante               │
+│                                                                   │
+│ NEGATIVO (-0.6 a -0.3):                                          │
+│   -0.6 = Crítica moderada-forte                                  │
+│   -0.5 = Crítica moderada, questão adversa                      │
+│   -0.4 = Crítica leve, aspecto negativo                         │
+│   -0.3 = Ligeiramente negativo                                   │
+│                                                                   │
+│ NEUTRO (approx 0.0):                                             │
+│    0.0 = Informação factual, sem julgamento claro               │
+│                                                                   │
+│ POSITIVO (0.3 a 0.6):                                            │
+│    0.3 = Ligeiramente positivo, notícia favorável               │
+│    0.4 = Elogio leve, aspecto positivo                          │
+│    0.5 = Elogio moderado, sucesso ou progresso                 │
+│    0.6 = Elogio moderado-forte                                  │
+│                                                                   │
+│ MUITO POSITIVO (0.7 a 1.0):                                      │
+│    0.7 = Grande sucesso, conquista importante                   │
+│    0.8 = Vitória significativa, grande elogio                   │
+│    0.9 = Aclamação máxima, reconhecimento excepcional           │
+│    1.0 = Vitória esmagadora, apoteose                           │
+└─────────────────────────────────────────────────────────────────┘
 
-RESPONDA COM JSON PURO (sem explicação, sem markdown):
-{"sentiment_score": <número entre -1.0 e 1.0>, "themes": ["tema1", "tema2"], "region": "UF ou null"}`;
+ANÁLISE:
+1. Qual é a INTENSIDADE emocional da notícia?
+2. Qual é o contexto político/social?
+3. Qual é o impacto para a reputação de ${entity.name}?
+
+Tema detectado (máx 3): política, economia, saúde, educação, segurança, ambiente, esporte, corrupção, justiça, cultura
+Estado/Região mencionado: SP, RJ, MG, BA, PE, CE, SC, RS, ou null
+
+RETORNE JSON VÁLIDO (SEM MARKDOWN, SEM EXPLICAÇÃO):
+{"sentiment_score": <float entre -1.0 e 1.0>, "themes": ["tema1"], "region": null}`;
 
     const stage2Response = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
