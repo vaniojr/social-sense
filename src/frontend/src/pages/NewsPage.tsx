@@ -9,7 +9,7 @@ interface NewsArticle {
   source?: string;
   url?: string;
   published_at?: string;
-  sentiment_score?: number;
+  sentiment_score?: string | number;
   themes?: string[];
   region?: string;
 }
@@ -98,7 +98,7 @@ export function NewsPage() {
 
   // Calculate statistics
   const avgSentiment = articles.length > 0
-    ? (articles.reduce((sum, a) => sum + (a.sentiment_score || 0), 0) / articles.length).toFixed(2)
+    ? (articles.reduce((sum, a) => sum + (parseFloat(String(a.sentiment_score)) || 0), 0) / articles.length).toFixed(2)
     : '0.00';
 
   const allThemes = new Map<string, number>();
@@ -114,10 +114,10 @@ export function NewsPage() {
 
   // Data for chart
   const chartData = [
-    { name: 'Muito Neg.', count: articles.filter(a => (a.sentiment_score || 0) <= -1).length },
-    { name: 'Negativo', count: articles.filter(a => (a.sentiment_score || 0) < -0.5 && (a.sentiment_score || 0) > -1).length },
-    { name: 'Neutro', count: articles.filter(a => (a.sentiment_score || 0) >= -0.5 && (a.sentiment_score || 0) <= 0.5).length },
-    { name: 'Positivo', count: articles.filter(a => (a.sentiment_score || 0) > 0.5).length },
+    { name: 'Muito Neg.', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) <= -1).length },
+    { name: 'Negativo', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) < -0.5 && (parseFloat(String(a.sentiment_score)) || 0) > -1).length },
+    { name: 'Neutro', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) >= -0.5 && (parseFloat(String(a.sentiment_score)) || 0) <= 0.5).length },
+    { name: 'Positivo', count: articles.filter(a => (parseFloat(String(a.sentiment_score)) || 0) > 0.5).length },
   ];
 
   if (!selectedId) {
@@ -215,12 +215,14 @@ export function NewsPage() {
                       <div className="flex-shrink-0 text-right">
                         <div
                           className="text-lg font-bold"
-                          style={{ color: sentimentToColor(article.sentiment_score) }}
+                          style={{ color: sentimentToColor(parseFloat(String(article.sentiment_score))) }}
                         >
-                          {article.sentiment_score.toFixed(2)}
+                          {typeof article.sentiment_score === 'string'
+                            ? article.sentiment_score
+                            : article.sentiment_score?.toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500 mt-1">
-                          {getSentimentLabel(article.sentiment_score)}
+                          {getSentimentLabel(parseFloat(String(article.sentiment_score)))}
                         </div>
                       </div>
                     )}
