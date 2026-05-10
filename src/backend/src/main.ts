@@ -381,6 +381,90 @@ async function generateAlerts(entityId: string, pool: Pool) {
   }
 }
 
+// Helper function to aggregate regional sentiment data
+async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
+  try {
+    console.log(`🗺️ Aggregating regional sentiment for entity ${entityId}...`);
+
+    // Define Brazilian states with their regions
+    const stateMap: { [key: string]: { region: string; state_name: string } } = {
+      'SP': { region: 'Southeast', state_name: 'São Paulo' },
+      'RJ': { region: 'Southeast', state_name: 'Rio de Janeiro' },
+      'MG': { region: 'Southeast', state_name: 'Minas Gerais' },
+      'ES': { region: 'Southeast', state_name: 'Espírito Santo' },
+      'BA': { region: 'Northeast', state_name: 'Bahia' },
+      'PE': { region: 'Northeast', state_name: 'Pernambuco' },
+      'CE': { region: 'Northeast', state_name: 'Ceará' },
+      'MA': { region: 'Northeast', state_name: 'Maranhão' },
+      'PB': { region: 'Northeast', state_name: 'Paraíba' },
+      'RN': { region: 'Northeast', state_name: 'Rio Grande do Norte' },
+      'AL': { region: 'Northeast', state_name: 'Alagoas' },
+      'SE': { region: 'Northeast', state_name: 'Sergipe' },
+      'PI': { region: 'Northeast', state_name: 'Piauí' },
+      'RS': { region: 'South', state_name: 'Rio Grande do Sul' },
+      'SC': { region: 'South', state_name: 'Santa Catarina' },
+      'PR': { region: 'South', state_name: 'Paraná' },
+      'PA': { region: 'North', state_name: 'Pará' },
+      'AM': { region: 'North', state_name: 'Amazonas' },
+      'AC': { region: 'North', state_name: 'Acre' },
+      'RO': { region: 'North', state_name: 'Rondônia' },
+      'RR': { region: 'North', state_name: 'Roraima' },
+      'AP': { region: 'North', state_name: 'Amapá' },
+      'TO': { region: 'North', state_name: 'Tocantins' },
+      'DF': { region: 'Center-West', state_name: 'Distrito Federal' },
+      'MT': { region: 'Center-West', state_name: 'Mato Grosso' },
+      'MS': { region: 'Center-West', state_name: 'Mato Grosso do Sul' },
+      'GO': { region: 'Center-West', state_name: 'Goiás' },
+    };
+
+    // Get aggregated sentiment by state (group NULL state_code as national)
+    const aggregationQuery = `
+      SELECT
+        COALESCE(ss.state_code, 'NATIONAL') as state_code,
+        AVG(CAST(ss.sentiment_score AS NUMERIC)) as avg_sentiment,
+        COUNT(*) as mention_volume,
+        ARRAY[]::TEXT[] as top_themes
+      FROM sentiment_scores ss
+      WHERE ss.entity_id = $1
+      GROUP BY COALESCE(ss.state_code, 'NATIONAL')
+    `;
+
+    const aggregationResult = await pool.query(aggregationQuery, [entityId]);
+    console.log(`📊 Found ${aggregationResult.rows.length} state groups to aggregate`);
+
+    // Update regional_sentiment_aggregated table
+    for (const row of aggregationResult.rows) {
+      const stateCode = row.state_code;
+      const stateInfo = stateMap[stateCode] || { region: 'National', state_name: 'Brasil' };
+
+      console.log(`  📍 ${stateCode}: sentiment=${row.avg_sentiment}, volume=${row.mention_volume}`);
+
+      await pool.query(`
+        INSERT INTO regional_sentiment_aggregated (entity_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+        ON CONFLICT (entity_id, state_code) DO UPDATE SET
+          avg_sentiment = EXCLUDED.avg_sentiment,
+          mention_volume = EXCLUDED.mention_volume,
+          top_themes = EXCLUDED.top_themes,
+          last_updated = NOW()
+      `, [
+        entityId,
+        stateInfo.region,
+        stateCode === 'NATIONAL' ? null : stateCode,
+        stateInfo.state_name,
+        Math.round(parseFloat(row.avg_sentiment) * 100) / 100, // Round to 2 decimals
+        row.mention_volume,
+        row.top_themes || []
+      ]);
+    }
+
+    console.log(`✅ Regional sentiment aggregation complete`);
+  } catch (error) {
+    console.error('Error aggregating regional sentiment:', error);
+  }
+}
+
+
 // GET /api/news - Retrieve news articles from database
 app.get('/api/news', async (req: Request, res: Response) => {
   try {
@@ -508,6 +592,9 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
 
     // 5. Generate alerts
     await generateAlerts(entityId, pool);
+
+    // 6. Aggregate regional sentiment for dashboard
+    await aggregateRegionalSentiment(entityId, pool);
 
     console.log(`✅ News fetch complete: ${articles.length} found, ${newCount} new, ${analyzedCount} analyzed`);
     res.json({ fetched: articles.length, new: newCount, analyzed: analyzedCount });
