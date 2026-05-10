@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { useEntity } from '../context/EntityContext';
 
 interface Message {
@@ -159,15 +160,28 @@ export function ChatWidget() {
 
             {messages.map((msg, idx) => (
               <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-xs px-3 py-2 rounded-lg text-sm ${
-                    msg.role === 'user'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-800'
-                  }`}
-                >
-                  {msg.content}
-                </div>
+                {msg.role === 'user' ? (
+                  <div className="max-w-xs bg-blue-600 text-white px-3 py-2 rounded-lg text-sm">
+                    {msg.content}
+                  </div>
+                ) : (
+                  <div className="max-w-sm bg-gray-200 text-gray-800 px-3 py-2 rounded-lg text-sm prose prose-sm max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        h1: ({ ...props }) => <h3 className="text-sm font-bold mt-2 mb-1" {...props} />,
+                        h2: ({ ...props }) => <h4 className="text-xs font-bold mt-1.5 mb-0.5" {...props} />,
+                        h3: ({ ...props }) => <h4 className="text-xs font-bold mt-1 mb-0.5" {...props} />,
+                        p: ({ ...props }) => <p className="text-xs mb-0.5" {...props} />,
+                        ul: ({ ...props }) => <ul className="text-xs list-disc list-inside mb-0.5" {...props} />,
+                        li: ({ ...props }) => <li className="text-xs" {...props} />,
+                        strong: ({ ...props }) => <strong className="font-bold" {...props} />,
+                        em: ({ ...props }) => <em className="italic" {...props} />,
+                      }}
+                    >
+                      {msg.content}
+                    </ReactMarkdown>
+                  </div>
+                )}
               </div>
             ))}
 
