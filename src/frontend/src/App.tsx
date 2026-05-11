@@ -3,6 +3,7 @@ import { EntityProvider, useEntity } from './context/EntityContext'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
 import { NewsPage } from './pages/NewsPage'
+import { MonitoringPage } from './pages/MonitoringPage'
 import { ChatWidget } from './components/ChatWidget'
 
 function Navigation() {
@@ -46,6 +47,16 @@ function Navigation() {
               }`}
             >
               📰 Notícias
+            </Link>
+            <Link
+              to="/monitor"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/monitor'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              📊 Monitoramento
             </Link>
             <div className="ml-6 border-l border-gray-200 pl-6">
               <label className="text-xs font-semibold text-gray-600 block mb-1">Entidade</label>
@@ -97,6 +108,10 @@ const router = createBrowserRouter([
       {
         path: '/news',
         element: <NewsPage />,
+      },
+      {
+        path: '/monitor',
+        element: <MonitoringPage />,
       },
     ],
   },

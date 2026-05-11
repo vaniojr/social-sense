@@ -518,6 +518,75 @@ app.get('/api/news', async (req: Request, res: Response) => {
   }
 });
 
+// GET /api/news/filtered - Retrieve news with advanced filtering
+app.get('/api/news/filtered', async (req: Request, res: Response) => {
+  try {
+    const entityIdParam = req.query.entityId as string;
+    const limitParam = (req.query.limit as string) || '50';
+    const daysParam = (req.query.days as string) || '7';
+    const sentimentParam = req.query.sentiment as string;
+    const sourceParam = req.query.source as string;
+    const regionParam = req.query.region as string;
+    const offsetParam = (req.query.offset as string) || '0';
+
+    if (!entityIdParam) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    let query = `
+      SELECT
+        na.id, na.title, na.description, na.source,
+        na.url, na.published_at, na.content,
+        ss.sentiment_score, ss.themes, ss.state_code, ss.region
+      FROM news_articles na
+      LEFT JOIN sentiment_scores ss ON ss.article_id = na.id
+      WHERE na.entity_id = $1
+        AND na.published_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+    `;
+
+    const params: (string | number)[] = [entityIdParam];
+    let paramIndex = 2;
+
+    // Add sentiment filter
+    if (sentimentParam && sentimentParam !== 'all') {
+      if (sentimentParam === 'positive') {
+        query += ` AND ss.sentiment_score > 0.2`;
+      } else if (sentimentParam === 'negative') {
+        query += ` AND ss.sentiment_score < -0.2`;
+      } else if (sentimentParam === 'neutral') {
+        query += ` AND ss.sentiment_score BETWEEN -0.2 AND 0.2`;
+      }
+    }
+
+    // Add source filter
+    if (sourceParam && sourceParam !== 'all') {
+      query += ` AND na.source = $${paramIndex}`;
+      params[paramIndex - 1] = sourceParam;
+      paramIndex++;
+    }
+
+    // Add region filter
+    if (regionParam && regionParam !== 'all') {
+      query += ` AND ss.state_code = $${paramIndex}`;
+      params[paramIndex - 1] = regionParam;
+      paramIndex++;
+    }
+
+    query += ` ORDER BY na.published_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`;
+    params[paramIndex - 1] = parseInt(limitParam);
+    params[paramIndex] = parseInt(offsetParam);
+
+    const result = await pool.query(query, params);
+
+    console.log(`📰 Retrieved ${result.rows.length} filtered news articles`);
+    res.json({ articles: result.rows, total: result.rows.length });
+  } catch (error) {
+    console.error('❌ Error fetching filtered news:', error);
+    res.status(500).json({ error: 'Failed to fetch filtered news' });
+  }
+});
+
 // POST /api/news/fetch - Fetch news from NewsAPI and save to database
 app.post('/api/news/fetch', async (req: Request, res: Response) => {
   try {
