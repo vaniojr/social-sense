@@ -5,6 +5,19 @@ import { Pool } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
 import { validateDaysParameter, isValidUUID, isValidStateCode } from './utils/query-validation';
+import {
+  validateBody,
+  validateParams,
+  validateQuery,
+} from './middleware/validation-middleware';
+import {
+  CreateEntitySchema,
+  UpdateEntitySchema,
+  EntityIdParamSchema,
+  CreateChatSchema,
+  CreateCompetitorGroupSchema,
+  FetchNewsSchema,
+} from './schemas/validation';
 
 dotenv.config();
 
@@ -344,7 +357,7 @@ app.get('/api/entities/:id', async (req: Request, res: Response) => {
   }
 });
 
-app.post('/api/entities', async (req: Request, res: Response) => {
+app.post('/api/entities', validateBody(CreateEntitySchema), async (req: Request, res: Response) => {
   try {
     const { name, description, type, url } = req.body;
     const result = await pool.query(
@@ -396,21 +409,10 @@ app.get('/api/entities/:id/config', async (req: Request, res: Response) => {
 });
 
 // PUT /api/entities/:id - Update entity and preferences
-app.put('/api/entities/:id', async (req: Request, res: Response) => {
+app.put('/api/entities/:id', validateParams(EntityIdParamSchema), validateBody(UpdateEntitySchema), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, description, type, url, priority_regions, alert_preferences } = req.body;
-
-    // Validate priority regions (must be valid state codes)
-    if (priority_regions) {
-      const validStates = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
-      for (const region of priority_regions) {
-        if (!validStates.includes(region)) {
-          res.status(400).json({ error: `Invalid state code: ${region}` });
-          return;
-        }
-      }
-    }
 
     const result = await pool.query(
       'UPDATE entities SET name = $1, description = $2, type = $3, url = $4, priority_regions = $5, alert_preferences = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
@@ -431,7 +433,7 @@ app.put('/api/entities/:id', async (req: Request, res: Response) => {
 });
 
 // DELETE /api/entities/:id - Delete entity
-app.delete('/api/entities/:id', async (req: Request, res: Response) => {
+app.delete('/api/entities/:id', validateParams(EntityIdParamSchema), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -526,14 +528,9 @@ app.delete('/api/entities/:id/keywords/:keyword', async (req: Request, res: Resp
 // ===== COMPETITOR TRACKING ENDPOINTS =====
 
 // POST /api/competitor-groups - Create competitor group
-app.post('/api/competitor-groups', async (req: Request, res: Response) => {
+app.post('/api/competitor-groups', validateBody(CreateCompetitorGroupSchema), async (req: Request, res: Response) => {
   try {
     const { name, description } = req.body;
-
-    if (!name) {
-      res.status(400).json({ error: 'name required' });
-      return;
-    }
 
     const result = await pool.query(
       'INSERT INTO competitor_groups (name, description) VALUES ($1, $2) RETURNING *',
@@ -1503,22 +1500,22 @@ app.get('/api/news', async (req: Request, res: Response) => {
 });
 
 // GET /api/news/filtered - Retrieve news with advanced filtering
-app.get('/api/news/filtered', async (req: Request, res: Response) => {
+app.get('/api/news/filtered', validateQuery(FetchNewsSchema), async (req: Request, res: Response) => {
   try {
-    const entityIdParam = req.query.entityId as string;
-    const limitParam = (req.query.limit as string) || '50';
-    const daysParam = (req.query.days as string) || '7';
-    const sentimentParam = req.query.sentiment as string;
-    const sourceParam = req.query.source as string;
-    const regionParam = req.query.region as string;
-    const offsetParam = (req.query.offset as string) || '0';
+    const entityIdParam = (req.query.entity_id as unknown as string) || '';
+    const limitParam = (req.query.limit as unknown as string) || '50';
+    const daysParam = ((req.query.days as unknown as number) || 7) as number;
+    const sentimentParam = req.query.sentiment as unknown as string;
+    const sourceParam = req.query.source as unknown as string;
+    const regionParam = req.query.region as unknown as string;
+    const offsetParam = (req.query.offset as unknown as string) || '0';
 
     if (!entityIdParam) {
-      res.status(400).json({ error: 'entityId required' });
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
-    const validatedDays = validateDaysParameter(daysParam);
+    const validatedDays = daysParam;
     let query = `
       SELECT
         na.id, na.title, na.description, na.source,
@@ -1708,15 +1705,10 @@ app.get('/api/alerts', async (req: Request, res: Response) => {
 });
 
 // Chat endpoint with Claude AI integration
-app.post('/api/chat', async (req: Request, res: Response) => {
+app.post('/api/chat', validateBody(CreateChatSchema), async (req: Request, res: Response) => {
   try {
-    const { entityId, message, conversationId } = req.body;
-
-    // Validate inputs
-    if (!entityId || !message) {
-      res.status(400).json({ error: 'Missing entityId or message' });
-      return;
-    }
+    const { entity_id: entityId, message, context } = req.body;
+    const conversationId = (req.body as any).conversationId;
 
     // 1. Fetch entity data
     const entityResult = await pool.query(

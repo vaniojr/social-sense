@@ -16,7 +16,19 @@ export function validateDaysParameter(
   min: number = 1,
   max: number = 365
 ): number {
-  const parsed = parseInt(String(days || '7'), 10);
+  const daysStr = String(days || '7').trim();
+
+  if (!daysStr) {
+    return min; // Empty string defaults to min
+  }
+
+  // Check if the entire string is numeric (including optional minus sign and decimal point)
+  // This prevents partial parsing like '7 days' -> 7
+  if (!/^-?\d+(\.\d+)?$/.test(daysStr)) {
+    throw new Error(`Invalid days parameter: must be a number`);
+  }
+
+  const parsed = Math.floor(parseFloat(daysStr));
 
   if (isNaN(parsed)) {
     throw new Error(`Invalid days parameter: must be a number`);
