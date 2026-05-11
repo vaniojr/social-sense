@@ -42,14 +42,16 @@ Sistema completo para **políticos, influencers, brands e celebridades** monitor
 
 ## 📖 Documentação
 
+**Índice centralizado:** [docs/INDEX.md](docs/INDEX.md)
+
+**Principais documentos:**
 - [CLAUDE.md](CLAUDE.md) - Guia para Claude Code
-- [FINAL_STACK_CONFIRMATION.md](FINAL_STACK_CONFIRMATION.md) - Stack confirmado
+- [docs/QUICK_START.md](docs/QUICK_START.md) - Começar em 5 minutos
 - [docs/DESIGN.md](docs/DESIGN.md) - Requisitos do produto
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) - Arquitetura técnica
 - [docs/IMPLEMENTATION_FEATURES.md](docs/IMPLEMENTATION_FEATURES.md) - Como implementar
-- [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md) - Setup local (próxima)
-- [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md) - Zoho Mail + Gmail (próxima)
-- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - Deploy em produção (próxima)
+- [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md) - Setup local
+- [docs/DEPLOYMENT_GUIDE.md](docs/DEPLOYMENT_GUIDE.md) - Deploy em produção
 
 ## 🛠️ Stack Técnico
 
@@ -106,46 +108,61 @@ docker-compose up -d  # PostgreSQL + pgAdmin
 ## 📁 Estrutura do Projeto
 
 ```
-Analise_Politica/
-├── CLAUDE.md                    # Guia para Claude Code
-├── README.md                    # Este arquivo
-├── FINAL_STACK_CONFIRMATION.md  # Stack confirmado
-├── docker-compose.yml           # PostgreSQL local
+social-sense/
+├── CLAUDE.md                      # Guia para Claude Code (obrigatório ler)
+├── README.md                      # Este arquivo
+├── .gitignore
 │
-├── docs/
-│   ├── DESIGN.md               # Requisitos do produto
-│   ├── ARCHITECTURE.md         # Arquitetura técnica
+├── docs/                          # 📚 Toda a documentação centralizada
+│   ├── INDEX.md                   # Índice de documentação
+│   ├── QUICK_START.md             # Começar em 5 minutos
+│   ├── DESIGN.md                  # Requisitos do produto
+│   ├── ARCHITECTURE.md            # Arquitetura técnica
 │   ├── IMPLEMENTATION_FEATURES.md
-│   ├── SETUP_LOCAL.md          # Setup local (próx)
-│   ├── EMAIL_SETUP.md          # Email config (próx)
-│   ├── DEPLOYMENT_GUIDE.md     # Produção (próx)
-│   └── archived/               # Histórico
+│   ├── SETUP_LOCAL.md             # Setup local
+│   ├── EMAIL_SETUP.md
+│   ├── DEPLOYMENT_GUIDE.md
+│   ├── API.md                     # Documentação de APIs
+│   ├── PROJECT_STRUCTURE.md
+│   ├── ROADMAP.md
+│   ├── FINAL_STACK_CONFIRMATION.md
+│   ├── qa/                        # 🧪 Relatórios de QA
+│   │   ├── BLOCO_B_QA_REPORT.md
+│   │   ├── QA_VALIDATION_REPORT.md
+│   │   └── QA_CHAT_FINAL_REPORT.md
+│   ├── reports/                   # 📊 Relatórios de implementação
+│   │   ├── BLOCO_A_COMPLETE.md
+│   │   └── CHAT_IMPLEMENTATION_STATUS.md
+│   └── archived/                  # 📦 Histórico de documentação
 │
-├── src/
-│   ├── frontend/               # React app
-│   │   ├── public/
+├── config/                        # ⚙️ Configuração
+│   ├── .env.example               # Variáveis de ambiente
+│   └── docker-compose.yml         # PostgreSQL local
+│
+├── scripts/                       # 🤖 Automações
+│   ├── init-db.sql
+│   ├── push-and-run.sh
+│   └── ...
+│
+├── src/                           # 💻 Código fonte
+│   ├── frontend/                  # React + TypeScript
 │   │   ├── src/
-│   │   ├── package.json
-│   │   └── .env.example
+│   │   │   ├── pages/
+│   │   │   ├── components/
+│   │   │   ├── context/
+│   │   │   └── ...
+│   │   └── package.json
 │   │
-│   ├── backend/                # Node/Python backend
-│   │   ├── routes/
-│   │   ├── controllers/
-│   │   ├── models/
-│   │   ├── package.json        # (Node)
-│   │   └── requirements.txt    # (Python)
+│   ├── backend/                   # Node.js + Express
+│   │   ├── src/
+│   │   │   ├── utils/
+│   │   │   └── main.ts
+│   │   └── package.json
 │   │
-│   └── scripts/                # Automações
-│       ├── scrape_news.py
-│       ├── analyze_sentiment.py
-│       └── ...
+│   └── scripts/                   # GitHub Actions, automações
 │
-├── .github/
-│   └── workflows/              # GitHub Actions
-│       ├── ci.yml
-│       └── deploy.yml
-│
-└── ideas.txt                   # Brainstorming original
+└── .github/                       # 🚀 CI/CD
+    └── workflows/
 ```
 
 ## 🔄 Workflow de Desenvolvimento
@@ -162,10 +179,10 @@ Analise_Politica/
 
 ## 📞 Próximos Passos
 
-1. **Ler documentação:** [docs/DESIGN.md](docs/DESIGN.md)
-2. **Setup local:** [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md)
-3. **Configurar email:** [docs/EMAIL_SETUP.md](docs/EMAIL_SETUP.md)
-4. **Começar development:**
+1. **Ler documentação:** [docs/INDEX.md](docs/INDEX.md) (índice completo)
+2. **Começar rápido:** [docs/QUICK_START.md](docs/QUICK_START.md)
+3. **Setup local:** [docs/SETUP_LOCAL.md](docs/SETUP_LOCAL.md)
+4. **Começar desenvolvimento:**
    - Frontend: [src/frontend/](src/frontend/)
    - Backend: [src/backend/](src/backend/)
 
