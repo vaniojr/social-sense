@@ -1,6 +1,6 @@
 # 🚀 Roadmap Social Sense - Etapas Pendentes
 
-**Status Atual:** MVP Fase 1 - 70% completo  
+**Status Atual:** MVP Fase 1 - 85% completo  
 **Data:** 2026-05-11  
 **Responsável:** Desenvolvimento
 
@@ -9,7 +9,7 @@
 ## 📊 Visão Geral
 
 ```
-Fase 1 (MVP)         [██████████████░░░░] 70%
+Fase 1 (MVP)         [██████████████████░] 85%
 Fase 2 (Advanced)    [░░░░░░░░░░░░░░░░░░] 0%
 Fase 3 (War Room)    [░░░░░░░░░░░░░░░░░░] 0%
 Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 0%
@@ -165,27 +165,27 @@ Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 
 
 ---
 
-#### Bloco D: Monitoring Page (Semana 3)
-**Prioridade:** 🟡 ALTA  
+#### Bloco D: Monitoring Page ✅ COMPLETO
+**Prioridade:** 🟢 CONCLUÍDO  
 **Impacto:** Página central de monitoramento
 
 **Tarefas:**
-1. [ ] **Criar página `/monitor`**
-   - Feed de notícias em tempo real (últimas 50)
-   - Filtros por: data, source, sentiment, região
-   - Indicador visual de sentimento
+1. ✅ **Criar página `/monitor`**
+   - ✅ Feed de notícias em tempo real (últimas 50)
+   - ✅ Filtros por: data, source, sentiment, região
+   - ✅ Indicador visual de sentimento
 
-2. [ ] **News List Component**
-   - Exibir título, fonte, data, snippet, sentimento
-   - Hover mostra tema principal extraído
-   - Click abre URL no novo aba
+2. ✅ **News List Component**
+   - ✅ Exibir título, fonte, data, snippet, sentimento
+   - ✅ Hover mostra tema principal extraído
+   - ✅ Click abre URL no novo aba
 
-3. [ ] **Timeline Visualization**
-   - Gráfico de sentimento vs. tempo (últimos 7 dias)
-   - Biblioteca: Recharts (já instalado)
-   - Area chart com cores por sentimento
+3. ✅ **Timeline Visualization**
+   - ✅ Gráfico de sentimento vs. tempo (últimos 7 dias)
+   - ✅ Biblioteca: Recharts (já instalado)
+   - ✅ Area chart com cores por sentimento
 
-**Estimativa:** 1.5 dias (8h implementation)
+**Status:** Concluído em 2026-05-11
 
 ---
 
@@ -358,10 +358,10 @@ MVP Phase 1 Complete
 ├── C. Sentiment Analysis ✅ COMPLETO (2026-05-11)
 │   ├── Depends on: B (news to analyze)
 │   └── Needs: Claude API, Database table
-├── D. Monitoring Page ⏳ EM ANDAMENTO
+├── D. Monitoring Page ✅ COMPLETO (2026-05-11)
 │   ├── Depends on: B, C (needs news + sentiment)
 │   └── Needs: Frontend components
-└── E. Settings
+└── E. Settings ⏳ EM ANDAMENTO
     ├── Depends on: A (entity management)
     └── Needs: Backend endpoints
 
