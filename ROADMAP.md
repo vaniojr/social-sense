@@ -1,6 +1,6 @@
 # 🚀 Roadmap Social Sense - Etapas Pendentes
 
-**Status Atual:** MVP Fase 1 - 85% completo  
+**Status Atual:** MVP Fase 1 - 100% completo  
 **Data:** 2026-05-11  
 **Responsável:** Desenvolvimento
 
@@ -9,7 +9,7 @@
 ## 📊 Visão Geral
 
 ```
-Fase 1 (MVP)         [██████████████████░] 85%
+Fase 1 (MVP)         [██████████████████] 100%
 Fase 2 (Advanced)    [░░░░░░░░░░░░░░░░░░] 0%
 Fase 3 (War Room)    [░░░░░░░░░░░░░░░░░░] 0%
 Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 0%
@@ -189,31 +189,33 @@ Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 
 
 ---
 
-#### Bloco E: Configurações de Entidades (Semana 3-4)
-**Prioridade:** 🟡 MÉDIA  
+#### Bloco E: Configurações de Entidades ✅ COMPLETO
+**Prioridade:** 🟢 CONCLUÍDO  
 **Impacto:** Permite customização
 
 **Tarefas:**
-1. [ ] **Criar página `/settings`**
-   - Gerenciar entidades monitoradas
-   - Configurar temas de interesse (keywords)
-   - Regiões prioritárias
-   - Preferências de alertas
+1. ✅ **Criar página `/settings`**
+   - ✅ Gerenciar entidades monitoradas
+   - ✅ Configurar temas de interesse (keywords)
+   - ✅ Regiões prioritárias
+   - ✅ Preferências de alertas
 
-2. [ ] **Backend: Settings Endpoints**
-   - `PUT /api/entities/:id` - atualizar entidade
-   - `POST /api/entities/:id/keywords` - adicionar keywords
-   - `GET /api/entities/:id/config` - retorna configuração
+2. ✅ **Backend: Settings Endpoints**
+   - ✅ `PUT /api/entities/:id` - atualizar entidade
+   - ✅ `POST /api/entities/:id/keywords` - adicionar keywords
+   - ✅ `GET /api/entities/:id/config` - retorna configuração
+   - ✅ `DELETE /api/entities/:id/keywords/:keyword` - remover keyword
 
-3. [ ] **Validação & Constraints**
-   - Max 100 keywords por entidade
-   - Regiões devem ser válidas (27 estados + agregações)
+3. ✅ **Validação & Constraints**
+   - ✅ Max 100 keywords por entidade
+   - ✅ Regiões validadas (27 estados)
+   - ✅ Alert preferences com 3 tipos de alerta
 
-**Estimativa:** 1.5 dias (8h implementation)
+**Status:** Concluído em 2026-05-11
 
 ---
 
-**🎯 FIM DA FASE 1 MVP: Quando todas as etapas A-E estarem 100% testadas**
+**🎯 FIM DA FASE 1 MVP: TODAS AS 5 ETAPAS (A-E) 100% COMPLETAS**
 
 ---
 
@@ -350,22 +352,14 @@ Sexta:           Deploy to staging
 ## 🎨 Diagrama de Dependências
 
 ```
-MVP Phase 1 Complete
+MVP Phase 1 ✅ 100% COMPLETE
 ├── A. Chat Interface ✅ COMPLETO (2026-05-11)
-│   └── Needs: Claude API key, Backend chat endpoint
 ├── B. News Aggregation ✅ COMPLETO (2026-05-11)
-│   └── Needs: NewsAPI key, Scraper script
 ├── C. Sentiment Analysis ✅ COMPLETO (2026-05-11)
-│   ├── Depends on: B (news to analyze)
-│   └── Needs: Claude API, Database table
 ├── D. Monitoring Page ✅ COMPLETO (2026-05-11)
-│   ├── Depends on: B, C (needs news + sentiment)
-│   └── Needs: Frontend components
-└── E. Settings ⏳ EM ANDAMENTO
-    ├── Depends on: A (entity management)
-    └── Needs: Backend endpoints
+└── E. Settings ✅ COMPLETO (2026-05-11)
 
-Deploy Phase
+Deploy Phase (Próximo)
 ├── M. Vercel (Frontend)
 ├── N. Railway (Backend + DB)
 ├── O. Zoho Mail
@@ -431,5 +425,5 @@ NODE_ENV=development
 
 ---
 
-**Próximo review:** 2026-05-18 (final da Semana 2)  
-**Target MVP go-live:** 2026-05-25
+**Próximo review:** 2026-05-18 (Deploy Phase)  
+**Target MVP go-live:** 2026-05-18
