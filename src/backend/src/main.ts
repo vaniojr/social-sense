@@ -80,6 +80,40 @@ async function initializeDatabase() {
   } catch (err: any) {
     console.warn('⚠️  Could not create entity_keywords table:', err.message);
   }
+
+  // Create competitor tracking tables
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS competitor_groups (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        name VARCHAR(255) NOT NULL,
+        description TEXT,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_competitor_groups_created ON competitor_groups(created_at DESC);
+    `);
+    console.log('✅ Created competitor_groups table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create competitor_groups table:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS competitor_group_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        group_id UUID REFERENCES competitor_groups(id) ON DELETE CASCADE NOT NULL,
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        added_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(group_id, entity_id)
+      );
+      CREATE INDEX IF NOT EXISTS idx_competitor_group_members_group ON competitor_group_members(group_id);
+      CREATE INDEX IF NOT EXISTS idx_competitor_group_members_entity ON competitor_group_members(entity_id);
+    `);
+    console.log('✅ Created competitor_group_members table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create competitor_group_members table:', err.message);
+  }
 }
 
 // Health check endpoint
@@ -284,7 +318,397 @@ app.delete('/api/entities/:id/keywords/:keyword', async (req: Request, res: Resp
   }
 });
 
-// Geographic Analysis - Regional Sentiment
+// ===== COMPETITOR TRACKING ENDPOINTS =====
+
+// POST /api/competitor-groups - Create competitor group
+app.post('/api/competitor-groups', async (req: Request, res: Response) => {
+  try {
+    const { name, description } = req.body;
+
+    if (!name) {
+      res.status(400).json({ error: 'name required' });
+      return;
+    }
+
+    const result = await pool.query(
+      'INSERT INTO competitor_groups (name, description) VALUES ($1, $2) RETURNING *',
+      [name, description || null]
+    );
+
+    console.log(`✅ Created competitor group: ${name}`);
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error creating competitor group:', error);
+    res.status(500).json({ error: 'Failed to create competitor group' });
+  }
+});
+
+// GET /api/competitor-groups - List all competitor groups
+app.get('/api/competitor-groups', async (req: Request, res: Response) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM competitor_groups ORDER BY created_at DESC'
+    );
+
+    // Get member count for each group
+    const groupsWithMembers = await Promise.all(
+      result.rows.map(async (group: any) => {
+        const memberResult = await pool.query(
+          'SELECT COUNT(*) as member_count FROM competitor_group_members WHERE group_id = $1',
+          [group.id]
+        );
+        return {
+          ...group,
+          member_count: parseInt(memberResult.rows[0].member_count),
+        };
+      })
+    );
+
+    res.json(groupsWithMembers);
+  } catch (error) {
+    console.error('❌ Error fetching competitor groups:', error);
+    res.status(500).json({ error: 'Failed to fetch competitor groups' });
+  }
+});
+
+// GET /api/competitor-groups/:id - Get group with members
+app.get('/api/competitor-groups/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    // Get group
+    const groupResult = await pool.query(
+      'SELECT * FROM competitor_groups WHERE id = $1',
+      [id]
+    );
+
+    if (groupResult.rows.length === 0) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    // Get members
+    const membersResult = await pool.query(`
+      SELECT e.id, e.name, e.type, cgm.added_at
+      FROM competitor_group_members cgm
+      JOIN entities e ON e.id = cgm.entity_id
+      WHERE cgm.group_id = $1
+      ORDER BY cgm.added_at DESC
+    `, [id]);
+
+    res.json({
+      ...groupResult.rows[0],
+      members: membersResult.rows,
+    });
+  } catch (error) {
+    console.error('❌ Error fetching competitor group:', error);
+    res.status(500).json({ error: 'Failed to fetch competitor group' });
+  }
+});
+
+// PUT /api/competitor-groups/:id - Update group
+app.put('/api/competitor-groups/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    const result = await pool.query(
+      'UPDATE competitor_groups SET name = $1, description = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+      [name, description || null, id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    console.log(`✅ Updated competitor group: ${name}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error updating competitor group:', error);
+    res.status(500).json({ error: 'Failed to update competitor group' });
+  }
+});
+
+// DELETE /api/competitor-groups/:id - Delete group
+app.delete('/api/competitor-groups/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM competitor_groups WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Group not found' });
+      return;
+    }
+
+    console.log(`✅ Deleted competitor group`);
+    res.json({ deleted: true });
+  } catch (error) {
+    console.error('❌ Error deleting competitor group:', error);
+    res.status(500).json({ error: 'Failed to delete competitor group' });
+  }
+});
+
+// POST /api/competitor-groups/:id/members - Add entity to group
+app.post('/api/competitor-groups/:id/members', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { entityId } = req.body;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    const result = await pool.query(
+      'INSERT INTO competitor_group_members (group_id, entity_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+      [id, entityId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({ error: 'Member already exists in group' });
+      return;
+    }
+
+    console.log(`✅ Added member to competitor group`);
+    res.status(201).json({ id: result.rows[0].id, entity_id: entityId });
+  } catch (error) {
+    console.error('❌ Error adding group member:', error);
+    res.status(500).json({ error: 'Failed to add group member' });
+  }
+});
+
+// DELETE /api/competitor-groups/:id/members/:entityId - Remove entity from group
+app.delete('/api/competitor-groups/:id/members/:entityId', async (req: Request, res: Response) => {
+  try {
+    const { id, entityId } = req.params;
+
+    const result = await pool.query(
+      'DELETE FROM competitor_group_members WHERE group_id = $1 AND entity_id = $2 RETURNING *',
+      [id, entityId]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Member not found in group' });
+      return;
+    }
+
+    console.log(`✅ Removed member from competitor group`);
+    res.json({ deleted: true });
+  } catch (error) {
+    console.error('❌ Error removing group member:', error);
+    res.status(500).json({ error: 'Failed to remove group member' });
+  }
+});
+
+// GET /api/competitors/sentiment-comparison - Compare sentiment across entities
+app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Response) => {
+  try {
+    const groupIdParam = req.query.groupId as string;
+    const daysParam = (req.query.days as string) || '7';
+    const entityIdsParam = req.query.entityIds as string;
+
+    let entityIds: string[] = [];
+
+    if (groupIdParam) {
+      // Get entities from group
+      const result = await pool.query(
+        'SELECT entity_id FROM competitor_group_members WHERE group_id = $1',
+        [groupIdParam]
+      );
+      entityIds = result.rows.map((r: any) => r.entity_id);
+    } else if (entityIdsParam) {
+      // Use provided entity IDs
+      entityIds = entityIdsParam.split(',');
+    } else {
+      res.status(400).json({ error: 'groupId or entityIds required' });
+      return;
+    }
+
+    if (entityIds.length === 0) {
+      res.status(400).json({ error: 'No entities found' });
+      return;
+    }
+
+    // Get comparison data for each entity
+    const comparison: any = {};
+    const timelineMap: any = {};
+
+    for (const entityId of entityIds) {
+      const result = await pool.query(`
+        SELECT
+          AVG(ss.sentiment_score) as avg_sentiment,
+          COUNT(*) as mention_volume,
+          ss.state_code
+        FROM sentiment_scores ss
+        WHERE ss.entity_id = $1
+          AND ss.created_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+        GROUP BY ss.state_code
+      `, [entityId]);
+
+      const entityData = result.rows;
+      const avgSentiment = entityData.reduce((sum: number, row: any) => sum + parseFloat(row.avg_sentiment || 0), 0) / Math.max(entityData.length, 1);
+      const totalVolume = entityData.reduce((sum: number, row: any) => sum + parseInt(row.mention_volume), 0);
+
+      comparison[entityId] = {
+        current_sentiment: parseFloat(avgSentiment.toFixed(2)),
+        mention_volume: totalVolume,
+        top_regions: entityData.slice(0, 3).map((row: any) => ({
+          state: row.state_code,
+          sentiment: parseFloat(row.avg_sentiment || 0),
+        })),
+      };
+
+      // Build timeline
+      const timelineResult = await pool.query(`
+        SELECT
+          DATE(ss.created_at) as date,
+          AVG(ss.sentiment_score) as sentiment
+        FROM sentiment_scores ss
+        WHERE ss.entity_id = $1
+          AND ss.created_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+        GROUP BY DATE(ss.created_at)
+        ORDER BY DATE(ss.created_at)
+      `, [entityId]);
+
+      timelineResult.rows.forEach((row: any) => {
+        const date = row.date;
+        if (!timelineMap[date]) {
+          timelineMap[date] = { date };
+        }
+        timelineMap[date][entityId] = parseFloat(row.sentiment);
+      });
+    }
+
+    const timeline = Object.values(timelineMap);
+
+    console.log(`📊 Competitor comparison: ${entityIds.length} entities`);
+    res.json({ comparison, timeline });
+  } catch (error) {
+    console.error('❌ Error fetching sentiment comparison:', error);
+    res.status(500).json({ error: 'Failed to fetch sentiment comparison' });
+  }
+});
+
+// GET /api/competitors/market-share - Get market share (mention volume distribution)
+app.get('/api/competitors/market-share', async (req: Request, res: Response) => {
+  try {
+    const groupIdParam = req.query.groupId as string;
+
+    if (!groupIdParam) {
+      res.status(400).json({ error: 'groupId required' });
+      return;
+    }
+
+    // Get entities from group
+    const groupResult = await pool.query(
+      'SELECT entity_id FROM competitor_group_members WHERE group_id = $1',
+      [groupIdParam]
+    );
+
+    const entityIds = groupResult.rows.map((r: any) => r.entity_id);
+
+    if (entityIds.length === 0) {
+      res.status(404).json({ error: 'No entities in group' });
+      return;
+    }
+
+    // Get mention volume for each entity
+    const marketShare = await Promise.all(
+      entityIds.map(async (entityId: string) => {
+        const volResult = await pool.query(
+          'SELECT COUNT(*) as volume FROM sentiment_scores WHERE entity_id = $1',
+          [entityId]
+        );
+
+        const entityResult = await pool.query(
+          'SELECT name FROM entities WHERE id = $1',
+          [entityId]
+        );
+
+        return {
+          entity_id: entityId,
+          name: entityResult.rows[0]?.name || 'Unknown',
+          volume: parseInt(volResult.rows[0].volume),
+        };
+      })
+    );
+
+    const totalVolume = marketShare.reduce((sum: number, item: any) => sum + item.volume, 0);
+
+    const withPercentage = marketShare.map((item: any) => ({
+      ...item,
+      percentage: totalVolume > 0 ? parseFloat(((item.volume / totalVolume) * 100).toFixed(2)) : 0,
+    }));
+
+    console.log(`📊 Market share calculated for ${entityIds.length} competitors`);
+    res.json({ market_share: withPercentage, total_volume: totalVolume });
+  } catch (error) {
+    console.error('❌ Error fetching market share:', error);
+    res.status(500).json({ error: 'Failed to fetch market share' });
+  }
+});
+
+// GET /api/competitors/head-to-head - Head-to-head comparison between 2 entities
+app.get('/api/competitors/head-to-head', async (req: Request, res: Response) => {
+  try {
+    const entity1Param = req.query.entityId1 as string;
+    const entity2Param = req.query.entityId2 as string;
+
+    if (!entity1Param || !entity2Param) {
+      res.status(400).json({ error: 'entityId1 and entityId2 required' });
+      return;
+    }
+
+    // Get sentiment by region for both entities
+    const result1 = await pool.query(`
+      SELECT state_code, AVG(sentiment_score) as sentiment
+      FROM sentiment_scores
+      WHERE entity_id = $1
+      GROUP BY state_code
+    `, [entity1Param]);
+
+    const result2 = await pool.query(`
+      SELECT state_code, AVG(sentiment_score) as sentiment
+      FROM sentiment_scores
+      WHERE entity_id = $1
+      GROUP BY state_code
+    `, [entity2Param]);
+
+    const map1: any = {};
+    const map2: any = {};
+
+    result1.rows.forEach((row: any) => {
+      map1[row.state_code] = parseFloat(row.sentiment);
+    });
+
+    result2.rows.forEach((row: any) => {
+      map2[row.state_code] = parseFloat(row.sentiment);
+    });
+
+    const stronger_in = Object.keys(map1).filter((state: string) => map1[state] > (map2[state] || 0));
+    const weaker_in = Object.keys(map1).filter((state: string) => map1[state] < (map2[state] || 0));
+    const neutral = Object.keys(map1).filter((state: string) => Math.abs((map1[state] || 0) - (map2[state] || 0)) <= 0.1);
+
+    console.log(`⚔️  Head-to-head comparison completed`);
+    res.json({
+      entity1_id: entity1Param,
+      entity2_id: entity2Param,
+      stronger_in,
+      weaker_in,
+      neutral,
+    });
+  } catch (error) {
+    console.error('❌ Error fetching head-to-head comparison:', error);
+    res.status(500).json({ error: 'Failed to fetch head-to-head comparison' });
+  }
+});
+
+
 app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
   try {
     const { entityId } = req.query;
