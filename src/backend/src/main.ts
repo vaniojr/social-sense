@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
+import { validateDaysParameter, isValidUUID, isValidStateCode } from './utils/query-validation';
 
 dotenv.config();
 
@@ -743,6 +744,7 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
     const timelineMap: any = {};
 
     for (const entityId of entityIds) {
+      const validatedDays = validateDaysParameter(daysParam);
       const result = await pool.query(`
         SELECT
           AVG(ss.sentiment_score) as avg_sentiment,
@@ -750,9 +752,9 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
           ss.state_code
         FROM sentiment_scores ss
         WHERE ss.entity_id = $1
-          AND ss.created_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+          AND ss.created_at > NOW() - INTERVAL '1 day' * $2
         GROUP BY ss.state_code
-      `, [entityId]);
+      `, [entityId, validatedDays]);
 
       const entityData = result.rows;
       const avgSentiment = entityData.reduce((sum: number, row: any) => sum + parseFloat(row.avg_sentiment || 0), 0) / Math.max(entityData.length, 1);
@@ -774,10 +776,10 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
           AVG(ss.sentiment_score) as sentiment
         FROM sentiment_scores ss
         WHERE ss.entity_id = $1
-          AND ss.created_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+          AND ss.created_at > NOW() - INTERVAL '1 day' * $2
         GROUP BY DATE(ss.created_at)
         ORDER BY DATE(ss.created_at)
-      `, [entityId]);
+      `, [entityId, validatedDays]);
 
       timelineResult.rows.forEach((row: any) => {
         const date = row.date;
@@ -927,6 +929,7 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
     }
 
     // Get daily sentiment and volume
+    const validatedDays = validateDaysParameter(daysParam);
     const result = await pool.query(`
       SELECT
         DATE(ss.created_at) as date,
@@ -937,10 +940,10 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
       FROM sentiment_scores ss
       LEFT JOIN regional_sentiment_aggregated rs ON rs.state_code IS NOT NULL
       WHERE ss.entity_id = $1
-        AND ss.created_at > NOW() - INTERVAL '${daysParam} days'
+        AND ss.created_at > NOW() - INTERVAL '1 day' * $2
       GROUP BY DATE(ss.created_at)
       ORDER BY DATE(ss.created_at)
-    `, [entityId]);
+    `, [entityId, validatedDays]);
 
     const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
       date: row.date,
@@ -1023,6 +1026,7 @@ app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
     }
 
     // Get themes by date
+    const validatedDays = validateDaysParameter(daysParam);
     const result = await pool.query(`
       SELECT
         DATE(ss.created_at) as date,
@@ -1030,11 +1034,11 @@ app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
         AVG(ss.sentiment_score) as sentiment
       FROM sentiment_scores ss
       WHERE ss.entity_id = $1
-        AND ss.created_at > NOW() - INTERVAL '${daysParam} days'
+        AND ss.created_at > NOW() - INTERVAL '1 day' * $2
         AND ss.themes IS NOT NULL
       GROUP BY DATE(ss.created_at), theme
       ORDER BY DATE(ss.created_at)
-    `, [entityId]);
+    `, [entityId, validatedDays]);
 
     const themeMap: { [key: string]: trendAnalysis.ThemeEvolution } = {};
 
@@ -1514,6 +1518,7 @@ app.get('/api/news/filtered', async (req: Request, res: Response) => {
       return;
     }
 
+    const validatedDays = validateDaysParameter(daysParam);
     let query = `
       SELECT
         na.id, na.title, na.description, na.source,
@@ -1522,11 +1527,11 @@ app.get('/api/news/filtered', async (req: Request, res: Response) => {
       FROM news_articles na
       LEFT JOIN sentiment_scores ss ON ss.article_id = na.id
       WHERE na.entity_id = $1
-        AND na.published_at > NOW() - INTERVAL '${parseInt(daysParam)} days'
+        AND na.published_at > NOW() - INTERVAL '1 day' * $2
     `;
 
-    const params: (string | number)[] = [entityIdParam];
-    let paramIndex = 2;
+    const params: (string | number)[] = [entityIdParam, validatedDays];
+    let paramIndex = 3;
 
     // Add sentiment filter
     if (sentimentParam && sentimentParam !== 'all') {
@@ -2473,14 +2478,15 @@ app.get('/api/metrics/:metricName/trend', async (req: Request, res: Response) =>
       return;
     }
 
+    const validatedDays = validateDaysParameter(daysParam);
     const result = await pool.query(`
       SELECT metric_value, created_at
       FROM system_metrics
       WHERE entity_id = $1
         AND metric_name = $2
-        AND created_at > NOW() - INTERVAL '${daysParam} days'
+        AND created_at > NOW() - INTERVAL '1 day' * $3
       ORDER BY created_at
-    `, [entityId, metricName]);
+    `, [entityId, metricName, validatedDays]);
 
     const values = result.rows.map((r: any) => r.metric_value);
     const dataPoints = result.rows.map((r: any) => ({
