@@ -8,6 +8,7 @@ import { SettingsPage } from './pages/SettingsPage'
 import { CompetitorsPage } from './pages/CompetitorsPage'
 import { TrendsPage } from './pages/TrendsPage'
 import { WarRoomDashboard } from './pages/WarRoomDashboard'
+import { EntitiesPage } from './pages/EntitiesPage'
 import { EnhancedChatWidget } from './components/EnhancedChatWidget'
 
 function Navigation() {
@@ -31,6 +32,16 @@ function Navigation() {
               }`}
             >
               📊 Dashboard
+            </Link>
+            <Link
+              to="/entities"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/entities'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              📋 Entidades
             </Link>
             <Link
               to="/geo"
@@ -134,6 +145,10 @@ const router = createBrowserRouter([
       {
         path: '/',
         element: <Dashboard />,
+      },
+      {
+        path: '/entities',
+        element: <EntitiesPage />,
       },
       {
         path: '/geo',
