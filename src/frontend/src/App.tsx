@@ -4,6 +4,7 @@ import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
 import { NewsPage } from './pages/NewsPage'
 import { MonitoringPage } from './pages/MonitoringPage'
+import { SettingsPage } from './pages/SettingsPage'
 import { ChatWidget } from './components/ChatWidget'
 
 function Navigation() {
@@ -57,6 +58,16 @@ function Navigation() {
               }`}
             >
               📊 Monitoramento
+            </Link>
+            <Link
+              to="/settings"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/settings'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              ⚙️ Configurações
             </Link>
             <div className="ml-6 border-l border-gray-200 pl-6">
               <label className="text-xs font-semibold text-gray-600 block mb-1">Entidade</label>
@@ -112,6 +123,10 @@ const router = createBrowserRouter([
       {
         path: '/monitor',
         element: <MonitoringPage />,
+      },
+      {
+        path: '/settings',
+        element: <SettingsPage />,
       },
     ],
   },

@@ -48,6 +48,38 @@ async function initializeDatabase() {
       console.warn('⚠️  Could not add constraint:', err.message);
     }
   }
+
+  // Add settings columns to entities table
+  try {
+    await pool.query(`
+      ALTER TABLE entities
+      ADD COLUMN priority_regions TEXT[] DEFAULT '{}',
+      ADD COLUMN alert_preferences JSONB DEFAULT '{"sentiment_drop": true, "critical_sentiment": true, "high_volume": true}'
+    `);
+    console.log('✅ Added settings columns to entities table');
+  } catch (err: any) {
+    if (err.message?.includes('already exists')) {
+      console.log('✅ Settings columns already exist on entities table');
+    } else {
+      console.warn('⚠️  Could not add settings columns:', err.message);
+    }
+  }
+
+  // Create entity_keywords table
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS entity_keywords (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+        keyword VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(entity_id, keyword)
+      )
+    `);
+    console.log('✅ Created entity_keywords table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create entity_keywords table:', err.message);
+  }
 }
 
 // Health check endpoint
@@ -107,6 +139,148 @@ app.post('/api/entities', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating entity:', error);
     res.status(500).json({ error: 'Failed to create entity' });
+  }
+});
+
+// GET /api/entities/:id/config - Get entity configuration with keywords and alert preferences
+app.get('/api/entities/:id/config', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const result = await pool.query('SELECT * FROM entities WHERE id = $1', [id]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Entity not found' });
+      return;
+    }
+
+    const entity = result.rows[0];
+
+    // Get keywords for this entity
+    const keywordsResult = await pool.query(
+      'SELECT keyword FROM entity_keywords WHERE entity_id = $1 ORDER BY keyword',
+      [id]
+    ).catch(() => ({ rows: [] })); // Return empty if table doesn't exist yet
+
+    const keywords = keywordsResult.rows.map((r: any) => r.keyword);
+
+    res.json({
+      ...entity,
+      keywords,
+      priority_regions: entity.priority_regions || [],
+      alert_preferences: entity.alert_preferences || {
+        sentiment_drop: true,
+        critical_sentiment: true,
+        high_volume: true,
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching entity config:', error);
+    res.status(500).json({ error: 'Failed to fetch entity config' });
+  }
+});
+
+// PUT /api/entities/:id - Update entity and preferences
+app.put('/api/entities/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, description, type, url, priority_regions, alert_preferences } = req.body;
+
+    // Validate priority regions (must be valid state codes)
+    if (priority_regions) {
+      const validStates = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'];
+      for (const region of priority_regions) {
+        if (!validStates.includes(region)) {
+          res.status(400).json({ error: `Invalid state code: ${region}` });
+          return;
+        }
+      }
+    }
+
+    const result = await pool.query(
+      'UPDATE entities SET name = $1, description = $2, type = $3, url = $4, priority_regions = $5, alert_preferences = $6, updated_at = NOW() WHERE id = $7 RETURNING *',
+      [name, description, type, url, JSON.stringify(priority_regions || []), JSON.stringify(alert_preferences || {}), id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Entity not found' });
+      return;
+    }
+
+    console.log(`✅ Updated entity: ${name}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating entity:', error);
+    res.status(500).json({ error: 'Failed to update entity' });
+  }
+});
+
+// POST /api/entities/:id/keywords - Add keyword
+app.post('/api/entities/:id/keywords', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { keyword } = req.body;
+
+    if (!keyword) {
+      res.status(400).json({ error: 'keyword required' });
+      return;
+    }
+
+    // Create keywords table if it doesn't exist
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS entity_keywords (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE,
+        keyword VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(entity_id, keyword)
+      )
+    `);
+
+    // Check keyword count
+    const countResult = await pool.query(
+      'SELECT COUNT(*) as count FROM entity_keywords WHERE entity_id = $1',
+      [id]
+    );
+
+    if (parseInt(countResult.rows[0].count) >= 100) {
+      res.status(400).json({ error: 'Maximum 100 keywords per entity' });
+      return;
+    }
+
+    const result = await pool.query(
+      'INSERT INTO entity_keywords (entity_id, keyword) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
+      [id, keyword]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(400).json({ error: 'Keyword already exists' });
+      return;
+    }
+
+    console.log(`✅ Added keyword "${keyword}" to entity ${id}`);
+    res.status(201).json({ keyword, created_at: result.rows[0].created_at });
+  } catch (error) {
+    console.error('Error adding keyword:', error);
+    res.status(500).json({ error: 'Failed to add keyword' });
+  }
+});
+
+// DELETE /api/entities/:id/keywords/:keyword - Remove keyword
+app.delete('/api/entities/:id/keywords/:keyword', async (req: Request, res: Response) => {
+  try {
+    const { id, keyword } = req.params;
+    const decodedKeyword = decodeURIComponent(keyword);
+
+    const result = await pool.query(
+      'DELETE FROM entity_keywords WHERE entity_id = $1 AND keyword = $2',
+      [id, decodedKeyword]
+    );
+
+    console.log(`✅ Removed keyword "${decodedKeyword}" from entity ${id}`);
+    res.json({ deleted: true });
+  } catch (error) {
+    console.error('Error removing keyword:', error);
+    res.status(500).json({ error: 'Failed to remove keyword' });
   }
 });
 
