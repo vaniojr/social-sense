@@ -1,7 +1,7 @@
 # 🚀 Roadmap Social Sense - Etapas Pendentes
 
-**Status Atual:** MVP Fase 1 - 40% completo  
-**Data:** 2026-05-10  
+**Status Atual:** MVP Fase 1 - 70% completo  
+**Data:** 2026-05-11  
 **Responsável:** Desenvolvimento
 
 ---
@@ -9,7 +9,7 @@
 ## 📊 Visão Geral
 
 ```
-Fase 1 (MVP)         [███████░░░░░░░░░░] 40%
+Fase 1 (MVP)         [██████████████░░░░] 70%
 Fase 2 (Advanced)    [░░░░░░░░░░░░░░░░░░] 0%
 Fase 3 (War Room)    [░░░░░░░░░░░░░░░░░░] 0%
 Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 0%
@@ -30,6 +30,10 @@ Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 
 - ✅ Styling com Tailwind CSS
 - ✅ TypeScript strict mode
 - ✅ Zero console errors
+- ✅ **Chat Widget (Bloco A)** - Interface de chat com floating button, historico de mensagens, quick prompts
+- ✅ **GeoAnalysis Page** - Análise geográfica com mapa regional interativo
+- ✅ **Real-time Polling** - 30-segundo polling em Dashboard e GeoAnalysis
+- ✅ **Local GeoJSON Storage** - Fallback para carregamento offline do mapa Brasil
 
 ### Backend
 - ✅ Express API em TypeScript (ES modules)
@@ -40,6 +44,11 @@ Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 
 - ✅ Database seeding com dados mock
 - ✅ Error handling middleware
 - ✅ Health check endpoint
+- ✅ **Chat Integration (Bloco A)** - POST `/api/chat` com Claude API e persistência de chat_conversations
+- ✅ **News Aggregation (Bloco B)** - POST `/api/news/fetch` com NewsAPI + GitHub Actions cron job
+- ✅ **Sentiment Analysis (Bloco C)** - 2-stage sentiment analysis com chain-of-thought reasoning
+- ✅ **Alerts System (Bloco C)** - Detecção de crises com alertas armazenados e exibidos no frontend
+- ✅ **Regional Sentiment Auto-aggregation** - Agrega dados sentiment_scores → regional_sentiment_aggregated
 
 ### Documentação
 - ✅ CLAUDE.md atualizado
@@ -60,97 +69,99 @@ Deploy/Produção      [░░░░░░░░░░░░░░░░░░] 
 
 ### 🎯 FASE 1 MVP - COMPLETAR (Semanas 1-4)
 
-#### Bloco A: Chat AI Copilot (Semana 1)
-**Prioridade:** 🔴 CRÍTICA  
+#### Bloco A: Chat AI Copilot ✅ COMPLETO
+**Prioridade:** 🟢 CONCLUÍDO  
 **Impacto:** Alta visibilidade, core differentiator
 
 **Tarefas:**
-1. [ ] **Criar componente Chat Interface**
-   - Sidebar conversacional fixa
-   - Input box + send button
-   - Message history display
-   - Exemplos de queries pré-definidas
+1. ✅ **Criar componente Chat Interface**
+   - ✅ Sidebar conversacional fixa
+   - ✅ Input box + send button
+   - ✅ Message history display
+   - ✅ Exemplos de queries pré-definidas
 
-2. [ ] **Integrar Claude API**
-   - Setup chamadas à API Claude
-   - Implementar context window (últimas 5 mensagens)
-   - Tratar erros de rate limit
-   - Add timeout de 30s
+2. ✅ **Integrar Claude API**
+   - ✅ Setup chamadas à API Claude
+   - ✅ Implementar context window (últimas 5 mensagens)
+   - ✅ Tratar erros de rate limit
+   - ✅ Add timeout de 30s
 
-3. [ ] **Backend: Chat Endpoint**
-   - `POST /api/chat/message` - processa query do usuário
-   - Formata contexto (entidade selecionada, dados atuais)
-   - Chamada ao Claude API
-   - Retorna resposta estruturada
+3. ✅ **Backend: Chat Endpoint**
+   - ✅ `POST /api/chat` - processa query do usuário
+   - ✅ Formata contexto (entidade selecionada, dados atuais)
+   - ✅ Chamada ao Claude API
+   - ✅ Retorna resposta estruturada
 
-4. [ ] **Database: Chat History**
-   - Tabela `chat_conversations` (entity_id, user_id, messages, created_at)
-   - Persistir histórico de conversas
+4. ✅ **Database: Chat History**
+   - ✅ Tabela `chat_conversations` (entity_id, user_id, messages, created_at)
+   - ✅ Persistir histórico de conversas
 
-**Estimativa:** 1.5 dias (8h coding + 4h debugging/testing)
+**Status:** Concluído em 2026-05-11
 
 ---
 
-#### Bloco B: News Aggregation (Semana 1-2)
-**Prioridade:** 🔴 CRÍTICA  
+#### Bloco B: News Aggregation ✅ COMPLETO
+**Prioridade:** 🟢 CONCLUÍDO  
 **Impacto:** Alimenta alertas e análise
 
 **Tarefas:**
-1. [ ] **NewsAPI Integration**
-   - Setup NewsAPI (https://newsapi.org)
-   - Criar Python script: `scripts/scrape_news.py`
-   - Buscar por entidade (Lula, Bolsonaro, Neymar Jr, Natura)
-   - Filtrar por país (Brazil) + idioma (Portuguese)
-   - Limitar a últimas 24h
+1. ✅ **NewsAPI Integration**
+   - ✅ Setup NewsAPI (https://newsapi.org)
+   - ✅ Criar Python script: `scripts/scrape_news.py`
+   - ✅ Buscar por entidade (Lula, Bolsonaro, Neymar Jr, Natura)
+   - ✅ Filtrar por país (Brazil) + idioma (Portuguese)
+   - ✅ Limitar a últimas 24h
 
-2. [ ] **Backend: News Endpoint**
-   - `GET /api/news?entityId=<id>&days=7`
-   - Retorna lista de artigos com source, title, url, published_at
-   - Ordenar por relevância/data
+2. ✅ **Backend: News Endpoint**
+   - ✅ `POST /api/news/fetch` - busca e armazena notícias
+   - ✅ `GET /api/news?entityId=<id>&days=7` - retorna artigos
+   - ✅ Ordenação por relevância/data
 
-3. [ ] **Database: News Table**
-   - `news_articles` (entity_id, title, source, url, published_at, sentiment, last_updated)
-   - Índice em entity_id + published_at
+3. ✅ **Database: News Table**
+   - ✅ `news_articles` table com todas as colunas
+   - ✅ `sentiment_scores` table para armazenar análises
+   - ✅ Índices em entity_id + published_at
 
-4. [ ] **Automation: GitHub Actions**
-   - Cron job: executar `scrape_news.py` a cada 30min
-   - Atualizar DB com novos artigos
-   - Processar sentimento via Claude API
+4. ✅ **Automation: GitHub Actions**
+   - ✅ Cron job: executa a cada 30min
+   - ✅ Atualiza DB com novos artigos
+   - ✅ Processa sentimento automaticamente
 
-**Estimativa:** 2 dias (12h implementation + testing)
+**Status:** Concluído em 2026-05-11
 
 ---
 
-#### Bloco C: Sentiment Analysis + Alerts (Semana 2)
-**Prioridade:** 🔴 CRÍTICA  
+#### Bloco C: Sentiment Analysis + Alerts ✅ COMPLETO
+**Prioridade:** 🟢 CONCLUÍDO  
 **Impacto:** Core feature do MVP
 
 **Tarefas:**
-1. [ ] **Sentiment Scoring**
-   - Criar script: `scripts/analyze_sentiment.py`
-   - Para cada artigo/menção: chamada ao Claude API
-   - Extrair: score (-1 a +1), temas principais, região/estado
-   - Salvar em `sentiment_scores` table
+1. ✅ **Sentiment Scoring**
+   - ✅ 2-stage sentiment analysis com chain-of-thought
+   - ✅ Stage 1: Identifica direção (POSITIVO/NEGATIVO/NEUTRO)
+   - ✅ Stage 2: Quantifica intensidade (-1.0 a +1.0)
+   - ✅ Extrai temas principais e região/estado
+   - ✅ Usa Claude Sonnet para melhor reasoning
 
-2. [ ] **Backend: Sentiment Endpoint**
-   - `GET /api/sentiment?entityId=<id>&days=7`
-   - Retorna agregação por tema, região, timeline
-   - Cálculo de média, picos, tendências
+2. ✅ **Backend: Sentiment Endpoint**
+   - ✅ `GET /api/sentiment?entityId=<id>&days=7`
+   - ✅ Retorna agregação por tema, região, timeline
+   - ✅ Cálculo de média, picos, tendências
 
-3. [ ] **Alerts System**
-   - Tabela `alerts` (entity_id, type, severity, title, description, created_at)
-   - Regras:
-     - Sentimento cai > 0.2 em 1h → Alert "Atenção"
-     - Sentimento < -0.5 em qualquer estado → Alert "Crítico"
-     - > 1000 menções em 1h → Alert "Volume Alto"
-   - Persistir alertas para dashboard
+3. ✅ **Alerts System**
+   - ✅ Tabela `alerts` (entity_id, type, severity, title, description, created_at)
+   - ✅ Regras implementadas:
+     - ✅ Sentimento cai > 0.2 em 1h → Alert "Atenção"
+     - ✅ Sentimento < -0.5 em qualquer estado → Alert "Crítico"
+     - ✅ > 1000 menções em 1h → Alert "Volume Alto"
+   - ✅ Persistir alertas para dashboard
 
-4. [ ] **Frontend: Alerts Panel**
-   - Mostrar últimos 5 alertas com cores (🟢 info, 🟡 attention, 🔴 critical)
-   - Timestamps relativos (2m atrás, 1h atrás)
-   - Click para expandir detalhes
+4. ✅ **Frontend: Alerts Panel**
+   - ✅ Mostrar últimos 5 alertas com cores (🟢 info, 🟡 attention, 🔴 critical)
+   - ✅ Timestamps relativos (2m atrás, 1h atrás)
+   - ✅ Click para expandir detalhes
 
-**Estimativa:** 2.5 dias (15h implementation + testing)
+**Status:** Concluído em 2026-05-11
 
 ---
 
@@ -340,14 +351,14 @@ Sexta:           Deploy to staging
 
 ```
 MVP Phase 1 Complete
-├── A. Chat Interface ✅ Ready
+├── A. Chat Interface ✅ COMPLETO (2026-05-11)
 │   └── Needs: Claude API key, Backend chat endpoint
-├── B. News Aggregation ✅ Ready
+├── B. News Aggregation ✅ COMPLETO (2026-05-11)
 │   └── Needs: NewsAPI key, Scraper script
-├── C. Sentiment Analysis
+├── C. Sentiment Analysis ✅ COMPLETO (2026-05-11)
 │   ├── Depends on: B (news to analyze)
 │   └── Needs: Claude API, Database table
-├── D. Monitoring Page
+├── D. Monitoring Page ⏳ EM ANDAMENTO
 │   ├── Depends on: B, C (needs news + sentiment)
 │   └── Needs: Frontend components
 └── E. Settings
@@ -420,5 +431,5 @@ NODE_ENV=development
 
 ---
 
-**Próximo review:** 2026-05-17 (final da Semana 1)  
-**Target MVP go-live:** 2026-06-07
+**Próximo review:** 2026-05-18 (final da Semana 2)  
+**Target MVP go-live:** 2026-05-25
