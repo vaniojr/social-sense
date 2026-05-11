@@ -114,6 +114,187 @@ async function initializeDatabase() {
   } catch (err: any) {
     console.warn('⚠️  Could not create competitor_group_members table:', err.message);
   }
+
+  // Create trend detection tables
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sentiment_trends (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        metric_type VARCHAR(50) NOT NULL,
+        value DECIMAL NOT NULL,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_sentiment_trends_entity ON sentiment_trends(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_sentiment_trends_created ON sentiment_trends(created_at DESC);
+    `);
+    console.log('✅ Created sentiment_trends table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create sentiment_trends table:', err.message);
+  }
+
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS trend_alerts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        alert_type VARCHAR(50) NOT NULL,
+        severity VARCHAR(20) NOT NULL,
+        description TEXT NOT NULL,
+        detected_at TIMESTAMP DEFAULT NOW(),
+        is_dismissed BOOLEAN DEFAULT FALSE
+      );
+      CREATE INDEX IF NOT EXISTS idx_trend_alerts_entity ON trend_alerts(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_trend_alerts_severity ON trend_alerts(severity);
+    `);
+    console.log('✅ Created trend_alerts table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create trend_alerts table:', err.message);
+  }
+
+  // Enhance chat_conversations table
+  try {
+    await pool.query(`
+      ALTER TABLE chat_conversations
+      ADD COLUMN title VARCHAR(255),
+      ADD COLUMN is_archived BOOLEAN DEFAULT FALSE,
+      ADD COLUMN tags TEXT[] DEFAULT '{}',
+      ADD COLUMN metadata JSONB DEFAULT '{}'
+    `);
+    console.log('✅ Enhanced chat_conversations table');
+  } catch (err: any) {
+    if (err.message?.includes('already exists')) {
+      console.log('✅ Chat table enhancement already applied');
+    } else {
+      console.warn('⚠️  Could not enhance chat_conversations table:', err.message);
+    }
+  }
+
+  // Create chat_follow_ups table
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_follow_ups (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE NOT NULL,
+        question TEXT NOT NULL,
+        answer TEXT NOT NULL,
+        sources TEXT[],
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_follow_ups_conversation ON chat_follow_ups(conversation_id);
+    `);
+    console.log('✅ Created chat_follow_ups table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create chat_follow_ups table:', err.message);
+  }
+
+  // Create chat_snippets table
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_snippets (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE NOT NULL,
+        snippet_text TEXT NOT NULL,
+        message_context TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_snippets_conversation ON chat_snippets(conversation_id);
+    `);
+    console.log('✅ Created chat_snippets table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create chat_snippets table:', err.message);
+  }
+
+  // Create chat_exports table
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_exports (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        conversation_id UUID REFERENCES chat_conversations(id) ON DELETE CASCADE NOT NULL,
+        format VARCHAR(20) NOT NULL,
+        file_path VARCHAR(500),
+        download_url VARCHAR(500),
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_chat_exports_conversation ON chat_exports(conversation_id);
+    `);
+    console.log('✅ Created chat_exports table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create chat_exports table:', err.message);
+  }
+
+  // Create real-time events table (Bloco I)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS real_time_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        event_type VARCHAR(50) NOT NULL,
+        severity VARCHAR(20) DEFAULT 'info',
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        data JSONB,
+        created_at TIMESTAMP DEFAULT NOW(),
+        is_acknowledged BOOLEAN DEFAULT FALSE
+      );
+      CREATE INDEX IF NOT EXISTS idx_real_time_events_entity ON real_time_events(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_real_time_events_created ON real_time_events(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_real_time_events_severity ON real_time_events(severity);
+    `);
+    console.log('✅ Created real_time_events table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create real_time_events table:', err.message);
+  }
+
+  // Create system metrics table (Bloco K)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS system_metrics (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        metric_name VARCHAR(100) NOT NULL,
+        metric_value DECIMAL NOT NULL,
+        dimension JSONB,
+        created_at TIMESTAMP DEFAULT NOW()
+      );
+      CREATE INDEX IF NOT EXISTS idx_system_metrics_entity ON system_metrics(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_system_metrics_created ON system_metrics(created_at DESC);
+      CREATE INDEX IF NOT EXISTS idx_system_metrics_name ON system_metrics(metric_name);
+    `);
+    console.log('✅ Created system_metrics table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create system_metrics table:', err.message);
+  }
+
+  // Create action recommendations table (Bloco L)
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS action_recommendations (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        entity_id UUID REFERENCES entities(id) ON DELETE CASCADE NOT NULL,
+        recommendation_type VARCHAR(50) NOT NULL,
+        priority VARCHAR(20) NOT NULL,
+        title VARCHAR(255) NOT NULL,
+        description TEXT,
+        suggested_action TEXT,
+        impact_score DECIMAL,
+        confidence_score DECIMAL,
+        status VARCHAR(20) DEFAULT 'active',
+        is_acknowledged BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        updated_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP
+      );
+      CREATE INDEX IF NOT EXISTS idx_recommendations_entity ON action_recommendations(entity_id);
+      CREATE INDEX IF NOT EXISTS idx_recommendations_priority ON action_recommendations(priority);
+      CREATE INDEX IF NOT EXISTS idx_recommendations_created ON action_recommendations(created_at DESC);
+    `);
+    console.log('✅ Created action_recommendations table');
+  } catch (err: any) {
+    console.warn('⚠️  Could not create action_recommendations table:', err.message);
+  }
 }
 
 // Health check endpoint
@@ -708,6 +889,184 @@ app.get('/api/competitors/head-to-head', async (req: Request, res: Response) => 
   }
 });
 
+// ===== TREND DETECTION ENDPOINTS =====
+import * as trendAnalysis from './utils/trend-analysis.js';
+
+// GET /api/trends/timeline - Timeline with sentiment, volume, and anomalies
+app.get('/api/trends/timeline', async (req: Request, res: Response) => {
+  try {
+    const { entityId, days = '30' } = req.query;
+    const daysParam = parseInt(days as string) || 30;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Get daily sentiment and volume
+    const result = await pool.query(`
+      SELECT
+        DATE(ss.created_at) as date,
+        AVG(ss.sentiment_score) as sentiment_avg,
+        COUNT(*) as volume,
+        array_agg(DISTINCT rs.state_code ORDER BY rs.state_code) FILTER (WHERE ss.sentiment_score > 0.3) as regions_positive,
+        array_agg(DISTINCT rs.state_code ORDER BY rs.state_code) FILTER (WHERE ss.sentiment_score < -0.3) as regions_negative
+      FROM sentiment_scores ss
+      LEFT JOIN regional_sentiment_aggregated rs ON rs.state_code IS NOT NULL
+      WHERE ss.entity_id = $1
+        AND ss.created_at > NOW() - INTERVAL '${daysParam} days'
+      GROUP BY DATE(ss.created_at)
+      ORDER BY DATE(ss.created_at)
+    `, [entityId]);
+
+    const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
+      date: row.date,
+      sentiment_avg: parseFloat(row.sentiment_avg || 0),
+      sentiment_change_pct: 0,
+      volume: parseInt(row.volume),
+      regions_positive: row.regions_positive || [],
+      regions_negative: row.regions_negative || [],
+    }));
+
+    // Calculate percent change
+    for (let i = 1; i < timeline.length; i++) {
+      const prev = timeline[i - 1].sentiment_avg;
+      const curr = timeline[i].sentiment_avg;
+      timeline[i].sentiment_change_pct = prev !== 0 ? ((curr - prev) / Math.abs(prev)) * 100 : 0;
+    }
+
+    const report = trendAnalysis.generateTimelineReport(timeline);
+
+    console.log(`📈 Timeline generated for ${daysParam} days: ${timeline.length} data points`);
+    res.json(report);
+  } catch (error) {
+    console.error('❌ Error fetching timeline:', error);
+    res.status(500).json({ error: 'Failed to fetch timeline' });
+  }
+});
+
+// GET /api/trends/anomalies - Detect anomalies
+app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
+  try {
+    const { entityId, sensitivity = '2.5' } = req.query;
+    const sensParam = parseFloat(sensitivity as string) || 2.5;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Get timeline for anomaly detection
+    const result = await pool.query(`
+      SELECT
+        DATE(ss.created_at) as date,
+        AVG(ss.sentiment_score) as sentiment_avg,
+        COUNT(*) as volume
+      FROM sentiment_scores ss
+      WHERE ss.entity_id = $1
+        AND ss.created_at > NOW() - INTERVAL '90 days'
+      GROUP BY DATE(ss.created_at)
+      ORDER BY DATE(ss.created_at)
+    `, [entityId]);
+
+    const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
+      date: row.date,
+      sentiment_avg: parseFloat(row.sentiment_avg || 0),
+      sentiment_change_pct: 0,
+      volume: parseInt(row.volume),
+      regions_positive: [],
+      regions_negative: [],
+    }));
+
+    const anomalies = trendAnalysis.detectAnomalies(timeline, sensParam);
+
+    console.log(`🚨 Detected ${anomalies.length} anomalies`);
+    res.json({ anomalies });
+  } catch (error) {
+    console.error('❌ Error detecting anomalies:', error);
+    res.status(500).json({ error: 'Failed to detect anomalies' });
+  }
+});
+
+// GET /api/trends/theme-evolution - Track theme evolution
+app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
+  try {
+    const { entityId, days = '30' } = req.query;
+    const daysParam = parseInt(days as string) || 30;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Get themes by date
+    const result = await pool.query(`
+      SELECT
+        DATE(ss.created_at) as date,
+        jsonb_array_elements(ss.themes) as theme,
+        AVG(ss.sentiment_score) as sentiment
+      FROM sentiment_scores ss
+      WHERE ss.entity_id = $1
+        AND ss.created_at > NOW() - INTERVAL '${daysParam} days'
+        AND ss.themes IS NOT NULL
+      GROUP BY DATE(ss.created_at), theme
+      ORDER BY DATE(ss.created_at)
+    `, [entityId]);
+
+    const themeMap: { [key: string]: trendAnalysis.ThemeEvolution } = {};
+
+    result.rows.forEach((row: any) => {
+      const themeName = row.theme;
+      if (!themeMap[themeName]) {
+        themeMap[themeName] = {
+          name: themeName,
+          volume_timeline: [],
+          sentiment_timeline: [],
+          trend: 'stable',
+          first_appeared: row.date,
+        };
+      }
+      themeMap[themeName].volume_timeline.push({ date: row.date, volume: 1 });
+      themeMap[themeName].sentiment_timeline.push({ date: row.date, sentiment: parseFloat(row.sentiment) });
+    });
+
+    // Calculate trend direction
+    const themes = Object.values(themeMap).map(theme => {
+      const volumes = theme.volume_timeline.map(v => v.volume);
+      const trend = volumes.length > 1 && volumes[volumes.length - 1] > volumes[0] ? 'rising' : 'falling';
+      return { ...theme, trend };
+    });
+
+    console.log(`🎨 Theme evolution: ${themes.length} themes tracked`);
+    res.json({ themes });
+  } catch (error) {
+    console.error('❌ Error fetching theme evolution:', error);
+    res.status(500).json({ error: 'Failed to fetch theme evolution' });
+  }
+});
+
+// POST /api/trends/alerts/:id/dismiss - Dismiss a trend alert
+app.post('/api/trends/alerts/:id/dismiss', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'UPDATE trend_alerts SET is_dismissed = TRUE WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Alert not found' });
+      return;
+    }
+
+    console.log(`✅ Alert ${id} dismissed`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error dismissing alert:', error);
+    res.status(500).json({ error: 'Failed to dismiss alert' });
+  }
+});
 
 app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
   try {
@@ -1424,6 +1783,911 @@ Cite números e regiões quando relevante.`;
   } catch (error) {
     console.error('❌ Error in chat endpoint:', error);
     res.status(500).json({ error: 'Failed to process chat message' });
+  }
+});
+
+// ===== ADVANCED CHAT ENDPOINTS (BLOCO H) =====
+import * as chatAnalysis from './utils/chat-analysis.js';
+import * as exportGenerator from './utils/export-generator.js';
+
+// GET /api/chat/conversations - List conversations
+app.get('/api/chat/conversations', async (req: Request, res: Response) => {
+  try {
+    const { entityId } = req.query;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    const result = await pool.query(`
+      SELECT
+        id,
+        title,
+        is_archived,
+        tags,
+        created_at,
+        updated_at,
+        (messages->0->>'content') as first_message
+      FROM chat_conversations
+      WHERE entity_id = $1 AND is_archived = FALSE
+      ORDER BY updated_at DESC
+      LIMIT 50
+    `, [entityId]);
+
+    const conversations = result.rows.map((row: any) => ({
+      id: row.id,
+      title: row.title || 'Conversa sem título',
+      tags: row.tags || [],
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      preview: row.first_message ? row.first_message.substring(0, 100) : '',
+    }));
+
+    console.log(`📋 Retrieved ${conversations.length} conversations`);
+    res.json({ conversations });
+  } catch (error) {
+    console.error('❌ Error fetching conversations:', error);
+    res.status(500).json({ error: 'Failed to fetch conversations' });
+  }
+});
+
+// GET /api/chat/conversations/:id - Get single conversation
+app.get('/api/chat/conversations/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'SELECT * FROM chat_conversations WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    const conversation = result.rows[0];
+    console.log(`📖 Retrieved conversation ${id}`);
+    res.json({
+      id: conversation.id,
+      entityId: conversation.entity_id,
+      title: conversation.title,
+      isArchived: conversation.is_archived,
+      tags: conversation.tags,
+      messages: conversation.messages,
+      createdAt: conversation.created_at,
+      updatedAt: conversation.updated_at,
+    });
+  } catch (error) {
+    console.error('❌ Error fetching conversation:', error);
+    res.status(500).json({ error: 'Failed to fetch conversation' });
+  }
+});
+
+// PUT /api/chat/conversations/:id - Update conversation metadata
+app.put('/api/chat/conversations/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { title, tags, isArchived } = req.body;
+
+    const result = await pool.query(`
+      UPDATE chat_conversations
+      SET
+        title = COALESCE($1, title),
+        tags = COALESCE($2, tags),
+        is_archived = COALESCE($3, is_archived),
+        updated_at = NOW()
+      WHERE id = $4
+      RETURNING *
+    `, [title, tags, isArchived, id]);
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    console.log(`✅ Updated conversation ${id}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error updating conversation:', error);
+    res.status(500).json({ error: 'Failed to update conversation' });
+  }
+});
+
+// DELETE /api/chat/conversations/:id - Archive conversation
+app.delete('/api/chat/conversations/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'UPDATE chat_conversations SET is_archived = TRUE, updated_at = NOW() WHERE id = $1 RETURNING id',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    console.log(`🗑️  Archived conversation ${id}`);
+    res.json({ archived: true });
+  } catch (error) {
+    console.error('❌ Error archiving conversation:', error);
+    res.status(500).json({ error: 'Failed to archive conversation' });
+  }
+});
+
+// POST /api/chat/conversations/:id/follow-ups - Add follow-up question
+app.post('/api/chat/conversations/:id/follow-ups', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { question, context } = req.body;
+
+    if (!question) {
+      res.status(400).json({ error: 'question required' });
+      return;
+    }
+
+    // Get conversation for context
+    const convResult = await pool.query(
+      'SELECT entity_id, messages FROM chat_conversations WHERE id = $1',
+      [id]
+    );
+
+    if (convResult.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    const conversation = convResult.rows[0];
+    const messages = conversation.messages || [];
+
+    // Build system prompt with conversation context
+    const systemPrompt = chatAnalysis.buildSystemPrompt('Entity', 'monitored entity');
+    const historyText = chatAnalysis.formatConversationHistory(messages);
+
+    // Call Claude for follow-up answer
+    const response = await anthropic.messages.create({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1024,
+      system: systemPrompt,
+      messages: [
+        { role: 'user', content: historyText },
+        { role: 'user', content: `Follow-up question: ${question}` },
+      ],
+    });
+
+    const answer = (response.content[0] as any).text || '';
+    const sources = chatAnalysis.extractSources(answer);
+
+    // Save follow-up
+    const result = await pool.query(`
+      INSERT INTO chat_follow_ups (conversation_id, question, answer, sources)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [id, question, answer, sources]);
+
+    console.log(`✅ Follow-up saved for conversation ${id}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error processing follow-up:', error);
+    res.status(500).json({ error: 'Failed to process follow-up' });
+  }
+});
+
+// GET /api/chat/conversations/:id/follow-ups - Get follow-ups
+app.get('/api/chat/conversations/:id/follow-ups', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'SELECT * FROM chat_follow_ups WHERE conversation_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+
+    console.log(`📝 Retrieved ${result.rows.length} follow-ups`);
+    res.json({ followUps: result.rows });
+  } catch (error) {
+    console.error('❌ Error fetching follow-ups:', error);
+    res.status(500).json({ error: 'Failed to fetch follow-ups' });
+  }
+});
+
+// POST /api/chat/conversations/:id/snippets - Save snippet
+app.post('/api/chat/conversations/:id/snippets', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { snippetText, messageContext } = req.body;
+
+    if (!snippetText) {
+      res.status(400).json({ error: 'snippetText required' });
+      return;
+    }
+
+    const result = await pool.query(`
+      INSERT INTO chat_snippets (conversation_id, snippet_text, message_context)
+      VALUES ($1, $2, $3)
+      RETURNING *
+    `, [id, snippetText, messageContext]);
+
+    console.log(`✅ Snippet saved for conversation ${id}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error saving snippet:', error);
+    res.status(500).json({ error: 'Failed to save snippet' });
+  }
+});
+
+// GET /api/chat/conversations/:id/snippets - Get snippets
+app.get('/api/chat/conversations/:id/snippets', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'SELECT * FROM chat_snippets WHERE conversation_id = $1 ORDER BY created_at DESC',
+      [id]
+    );
+
+    console.log(`📌 Retrieved ${result.rows.length} snippets`);
+    res.json({ snippets: result.rows });
+  } catch (error) {
+    console.error('❌ Error fetching snippets:', error);
+    res.status(500).json({ error: 'Failed to fetch snippets' });
+  }
+});
+
+// POST /api/chat/conversations/:id/export - Export conversation
+app.post('/api/chat/conversations/:id/export', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { format } = req.body;
+
+    if (!exportGenerator.isValidExportFormat(format)) {
+      res.status(400).json({ error: 'Invalid format. Use: pdf, markdown, or json' });
+      return;
+    }
+
+    const result = await pool.query(
+      'SELECT * FROM chat_conversations WHERE id = $1',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Conversation not found' });
+      return;
+    }
+
+    const conversation = result.rows[0];
+    const filename = exportGenerator.generateFilename(
+      conversation.title || 'conversation',
+      format
+    );
+
+    let content: string;
+    switch (format) {
+      case 'markdown':
+        content = exportGenerator.generateMarkdown({
+          id: conversation.id,
+          title: conversation.title,
+          entityName: conversation.entity_id,
+          messages: conversation.messages || [],
+          createdAt: conversation.created_at,
+          updatedAt: conversation.updated_at,
+        });
+        break;
+      case 'json':
+        content = exportGenerator.generateJSON({
+          id: conversation.id,
+          title: conversation.title,
+          entityName: conversation.entity_id,
+          messages: conversation.messages || [],
+          createdAt: conversation.created_at,
+          updatedAt: conversation.updated_at,
+        });
+        break;
+      case 'pdf':
+      default:
+        content = exportGenerator.generatePDFContent({
+          id: conversation.id,
+          title: conversation.title,
+          entityName: conversation.entity_id,
+          messages: conversation.messages || [],
+          createdAt: conversation.created_at,
+          updatedAt: conversation.updated_at,
+        });
+    }
+
+    // Save export record
+    const exportResult = await pool.query(`
+      INSERT INTO chat_exports (conversation_id, format, download_url, expires_at)
+      VALUES ($1, $2, $3, NOW() + INTERVAL '30 days')
+      RETURNING id
+    `, [id, format, `/exports/${filename}`]);
+
+    console.log(`📥 Export created: ${format} - ${filename}`);
+    res.json({
+      exportId: exportResult.rows[0].id,
+      format,
+      filename,
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ Error exporting conversation:', error);
+    res.status(500).json({ error: 'Failed to export conversation' });
+  }
+});
+
+// GET /api/chat/search - Search conversations
+app.get('/api/chat/search', async (req: Request, res: Response) => {
+  try {
+    const { entityId, q } = req.query;
+
+    if (!entityId || !q) {
+      res.status(400).json({ error: 'entityId and q (query) required' });
+      return;
+    }
+
+    const query = (q as string).toLowerCase();
+
+    const result = await pool.query(`
+      SELECT
+        cc.id,
+        cc.title,
+        cc.created_at,
+        cc.messages,
+        cm.content as match_text
+      FROM chat_conversations cc
+      LEFT JOIN LATERAL jsonb_array_elements(cc.messages) cm ON true
+      WHERE cc.entity_id = $1
+        AND (
+          LOWER(cc.title) LIKE $2
+          OR LOWER(cm.content) LIKE $2
+        )
+      GROUP BY cc.id, cm.content
+      ORDER BY cc.updated_at DESC
+      LIMIT 20
+    `, [entityId, `%${query}%`]);
+
+    const searchResults = result.rows.map((row: any) => ({
+      conversationId: row.id,
+      title: row.title,
+      matchContext: row.match_text ? row.match_text.substring(0, 150) : '',
+      createdAt: row.created_at,
+    }));
+
+    console.log(`🔍 Search found ${searchResults.length} results`);
+    res.json({ results: searchResults });
+  } catch (error) {
+    console.error('❌ Error searching conversations:', error);
+    res.status(500).json({ error: 'Failed to search conversations' });
+  }
+});
+
+// ===== REAL-TIME UPDATES ENDPOINTS (BLOCO I) =====
+import * as realTimeUtils from './utils/real-time-utils.js';
+import * as attackDetectionUtils from './utils/attack-detection-utils.js';
+
+// POST /api/events - Create real-time event
+app.post('/api/events', async (req: Request, res: Response) => {
+  try {
+    const { entityId, eventType, severity, title, description, data } = req.body;
+
+    if (!entityId || !eventType || !severity || !title) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    const result = await pool.query(`
+      INSERT INTO real_time_events (entity_id, event_type, severity, title, description, data)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [entityId, eventType, severity, title, description, JSON.stringify(data || {})]);
+
+    const event = result.rows[0];
+    console.log(`📢 Event created: ${severity} - ${title}`);
+    res.json(event);
+  } catch (error) {
+    console.error('❌ Error creating event:', error);
+    res.status(500).json({ error: 'Failed to create event' });
+  }
+});
+
+// GET /api/events - Get real-time events
+app.get('/api/events', async (req: Request, res: Response) => {
+  try {
+    const { entityId, severity, limit = '50' } = req.query;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    let query = `
+      SELECT * FROM real_time_events
+      WHERE entity_id = $1
+    `;
+    const params: any[] = [entityId];
+
+    if (severity) {
+      query += ` AND severity = $${params.length + 1}`;
+      params.push(severity);
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${params.length + 1}`;
+    params.push(parseInt(limit as string));
+
+    const result = await pool.query(query, params);
+
+    console.log(`📊 Retrieved ${result.rows.length} events`);
+    res.json({ events: result.rows });
+  } catch (error) {
+    console.error('❌ Error fetching events:', error);
+    res.status(500).json({ error: 'Failed to fetch events' });
+  }
+});
+
+// POST /api/events/:id/acknowledge - Acknowledge event
+app.post('/api/events/:id/acknowledge', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const result = await pool.query(
+      'UPDATE real_time_events SET is_acknowledged = TRUE WHERE id = $1 RETURNING *',
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Event not found' });
+      return;
+    }
+
+    console.log(`✅ Event ${id} acknowledged`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error acknowledging event:', error);
+    res.status(500).json({ error: 'Failed to acknowledge event' });
+  }
+});
+
+// GET /api/attacks - Get attack detection status
+app.get('/api/attacks', async (req: Request, res: Response) => {
+  try {
+    const { entityId } = req.query;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Get recent events for attack detection
+    const result = await pool.query(`
+      SELECT
+        event_type,
+        severity,
+        created_at,
+        data
+      FROM real_time_events
+      WHERE entity_id = $1
+        AND created_at > NOW() - INTERVAL '24 hours'
+      ORDER BY created_at DESC
+      LIMIT 100
+    `, [entityId]);
+
+    // Analyze for attack patterns
+    const events = result.rows;
+    const criticalCount = events.filter(e => e.severity === 'critical').length;
+    const recentVolume = events.length;
+
+    // Calculate attack indicators
+    const indicators: any[] = [];
+    if (criticalCount > 5) {
+      indicators.push({
+        type: 'CRITICAL_EVENT_SPIKE',
+        confidence: Math.min(0.95, criticalCount * 0.15),
+      });
+    }
+
+    const severity = attackDetectionUtils.calculateAttackSeverity(indicators);
+    const isImminent = attackDetectionUtils.isAttackImminent(severity);
+    const isOngoing = attackDetectionUtils.isAttackOngoing(severity, indicators.length);
+
+    console.log(`⚔️ Attack analysis: severity=${severity.toFixed(0)}, iminente=${isImminent}, ongoing=${isOngoing}`);
+    res.json({
+      severity: severity.toFixed(0),
+      isImminent,
+      isOngoing,
+      indicators,
+      eventCount: recentVolume,
+      criticalCount,
+    });
+  } catch (error) {
+    console.error('❌ Error analyzing attacks:', error);
+    res.status(500).json({ error: 'Failed to analyze attacks' });
+  }
+});
+
+// ===== PERFORMANCE ANALYTICS ENDPOINTS (BLOCO K) =====
+import * as performanceAnalytics from './utils/performance-analytics.js';
+
+// POST /api/metrics - Record a metric
+app.post('/api/metrics', async (req: Request, res: Response) => {
+  try {
+    const { entityId, metricName, metricValue, dimension } = req.body;
+
+    if (!entityId || !metricName || metricValue === undefined) {
+      res.status(400).json({ error: 'Missing required fields' });
+      return;
+    }
+
+    const result = await pool.query(`
+      INSERT INTO system_metrics (entity_id, metric_name, metric_value, dimension)
+      VALUES ($1, $2, $3, $4)
+      RETURNING *
+    `, [entityId, metricName, metricValue, JSON.stringify(dimension || {})]);
+
+    console.log(`📊 Metric recorded: ${metricName}=${metricValue}`);
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('❌ Error recording metric:', error);
+    res.status(500).json({ error: 'Failed to record metric' });
+  }
+});
+
+// GET /api/metrics - Get metrics with stats
+app.get('/api/metrics', async (req: Request, res: Response) => {
+  try {
+    const { entityId, metricName, hours = '24' } = req.query;
+    const hoursParam = parseInt(hours as string) || 24;
+
+    if (!entityId || !metricName) {
+      res.status(400).json({ error: 'entityId and metricName required' });
+      return;
+    }
+
+    const result = await pool.query(`
+      SELECT metric_value, created_at
+      FROM system_metrics
+      WHERE entity_id = $1
+        AND metric_name = $2
+        AND created_at > NOW() - INTERVAL '${hoursParam} hours'
+      ORDER BY created_at DESC
+      LIMIT 1000
+    `, [entityId, metricName]);
+
+    const values = result.rows.map((r: any) => r.metric_value);
+    const stats = performanceAnalytics.calculateStats(values);
+    const trend = performanceAnalytics.calculateTrend(values);
+    const slaViolation = performanceAnalytics.checkSLAViolation(metricName as string, values[0] || 0);
+
+    // Aggregate data for charts
+    const chartData = performanceAnalytics.aggregateByTimeBucket(
+      result.rows.map((r: any) => ({
+        timestamp: r.created_at,
+        value: r.metric_value,
+      })),
+      5 // 5-minute buckets
+    );
+
+    console.log(`📈 Metrics retrieved: ${metricName} (${values.length} samples)`);
+    res.json({
+      metricName,
+      stats,
+      trend,
+      slaViolation,
+      chartData,
+      dataPoints: values.length,
+    });
+  } catch (error) {
+    console.error('❌ Error fetching metrics:', error);
+    res.status(500).json({ error: 'Failed to fetch metrics' });
+  }
+});
+
+// GET /api/health - Get overall system health
+app.get('/api/health-score', async (req: Request, res: Response) => {
+  try {
+    const { entityId } = req.query;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Get latest values for all key metrics
+    const metricsResult = await pool.query(`
+      SELECT DISTINCT ON (metric_name) metric_name, metric_value, created_at
+      FROM system_metrics
+      WHERE entity_id = $1
+        AND created_at > NOW() - INTERVAL '1 hour'
+      ORDER BY metric_name, created_at DESC
+    `, [entityId]);
+
+    const violations: any[] = [];
+    const metrics: any[] = [];
+
+    metricsResult.rows.forEach((row: any) => {
+      const violation = performanceAnalytics.checkSLAViolation(row.metric_name, row.metric_value);
+      if (violation) {
+        violations.push(violation);
+      }
+
+      const stats = performanceAnalytics.calculateStats([row.metric_value]);
+      metrics.push({
+        name: row.metric_name,
+        current: row.metric_value,
+        threshold: performanceAnalytics.SLA_THRESHOLDS[row.metric_name] || null,
+        violation: violation ? true : false,
+      });
+    });
+
+    const healthScore = performanceAnalytics.calculateHealthScore(violations);
+    const healthStatus = performanceAnalytics.getHealthStatus(healthScore);
+
+    console.log(`❤️ Health score: ${healthScore}/100 - ${healthStatus.status}`);
+    res.json({
+      healthScore,
+      healthStatus,
+      violations: violations.length,
+      metrics,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('❌ Error calculating health score:', error);
+    res.status(500).json({ error: 'Failed to calculate health score' });
+  }
+});
+
+// GET /api/metrics/:metricName/trend - Get metric trend analysis
+app.get('/api/metrics/:metricName/trend', async (req: Request, res: Response) => {
+  try {
+    const { metricName } = req.params;
+    const { entityId, days = '7' } = req.query;
+    const daysParam = parseInt(days as string) || 7;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    const result = await pool.query(`
+      SELECT metric_value, created_at
+      FROM system_metrics
+      WHERE entity_id = $1
+        AND metric_name = $2
+        AND created_at > NOW() - INTERVAL '${daysParam} days'
+      ORDER BY created_at
+    `, [entityId, metricName]);
+
+    const values = result.rows.map((r: any) => r.metric_value);
+    const dataPoints = result.rows.map((r: any) => ({
+      timestamp: r.created_at,
+      value: r.metric_value,
+    }));
+
+    const stats = performanceAnalytics.calculateStats(values);
+    const trend = performanceAnalytics.calculateTrend(values);
+
+    // Split into periods for trend analysis
+    const midpoint = Math.floor(values.length / 2);
+    const firstPeriodAvg = values.slice(0, midpoint).reduce((a, b) => a + b) / midpoint || 0;
+    const secondPeriodAvg = values.slice(midpoint).reduce((a, b) => a + b) / (values.length - midpoint) || 0;
+    const periodChange = ((secondPeriodAvg - firstPeriodAvg) / (firstPeriodAvg || 1)) * 100;
+
+    console.log(`📊 Trend analysis: ${metricName} - ${trend.trend} ${trend.percent.toFixed(1)}%`);
+    res.json({
+      metricName,
+      stats,
+      trend,
+      periodChange: periodChange.toFixed(2),
+      dataPoints,
+      period: `${daysParam} days`,
+    });
+  } catch (error) {
+    console.error('❌ Error analyzing trend:', error);
+    res.status(500).json({ error: 'Failed to analyze trend' });
+  }
+});
+
+// Import recommendation engine
+import * as recommendationEngine from './utils/recommendation-engine.js';
+
+// GET /api/recommendations - Get active recommendations for entity
+app.get('/api/recommendations', async (req: Request, res: Response) => {
+  try {
+    const { entityId } = req.query;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId query parameter required' });
+      return;
+    }
+
+    const result = await pool.query(
+      `SELECT
+        id,
+        title,
+        description,
+        priority,
+        suggested_action as "suggestedAction",
+        confidence_score as "confidenceScore",
+        'active' as status,
+        created_at as "createdAt"
+      FROM action_recommendations
+      WHERE entity_id = $1 AND is_acknowledged = FALSE
+      ORDER BY created_at DESC
+      LIMIT 10`,
+      [entityId]
+    );
+
+    console.log(`💡 Retrieved ${result.rows.length} recommendations for entity ${entityId}`);
+    res.json({ recommendations: result.rows });
+  } catch (error) {
+    console.error('❌ Error fetching recommendations:', error);
+    res.status(500).json({ error: 'Failed to fetch recommendations' });
+  }
+});
+
+// POST /api/recommendations/:id/approve - Approve recommendation
+app.post('/api/recommendations/:id/approve', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { feedback } = req.body;
+
+    const result = await pool.query(
+      `UPDATE action_recommendations
+       SET is_acknowledged = TRUE, updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Recommendation not found' });
+      return;
+    }
+
+    console.log(`✅ Approved recommendation ${id}`);
+    res.json({ approved: true, recommendation: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Error approving recommendation:', error);
+    res.status(500).json({ error: 'Failed to approve recommendation' });
+  }
+});
+
+// POST /api/recommendations/:id/review - Mark recommendation for review
+app.post('/api/recommendations/:id/review', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+
+    const result = await pool.query(
+      `UPDATE action_recommendations
+       SET is_acknowledged = FALSE
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Recommendation not found' });
+      return;
+    }
+
+    console.log(`📋 Marked recommendation ${id} for review`);
+    res.json({ inReview: true, recommendation: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Error marking recommendation for review:', error);
+    res.status(500).json({ error: 'Failed to mark for review' });
+  }
+});
+
+// POST /api/recommendations/:id/dismiss - Dismiss recommendation
+app.post('/api/recommendations/:id/dismiss', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    const result = await pool.query(
+      `UPDATE action_recommendations
+       SET is_acknowledged = TRUE, updated_at = NOW()
+       WHERE id = $1
+       RETURNING *`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: 'Recommendation not found' });
+      return;
+    }
+
+    console.log(`❌ Dismissed recommendation ${id}: ${reason || 'no reason provided'}`);
+    res.json({ dismissed: true, recommendation: result.rows[0] });
+  } catch (error) {
+    console.error('❌ Error dismissing recommendation:', error);
+    res.status(500).json({ error: 'Failed to dismiss recommendation' });
+  }
+});
+
+// POST /api/recommendations/generate - Generate recommendations based on current data
+app.post('/api/recommendations/generate', async (req: Request, res: Response) => {
+  try {
+    const { entityId } = req.body;
+
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
+      return;
+    }
+
+    // Fetch recent attack data, health score, SLA violations, anomalies
+    const attacksResult = await pool.query(
+      `SELECT * FROM real_time_events
+       WHERE entity_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+       ORDER BY severity DESC
+       LIMIT 20`,
+      [entityId]
+    );
+
+    const healthResult = await pool.query(
+      `SELECT
+        (SELECT AVG(CASE
+          WHEN metric_name = 'response_time' AND metric_value > 500 THEN 0
+          WHEN metric_name = 'error_rate' AND metric_value > 1 THEN 0
+          WHEN metric_name = 'cpu_usage' AND metric_value > 80 THEN 0
+          ELSE 100 END)
+        FROM system_metrics
+        WHERE entity_id = $1 AND created_at > NOW() - INTERVAL '24 hours') as health_score`,
+      [entityId]
+    );
+
+    const anomaliesResult = await pool.query(
+      `SELECT * FROM sentiment_trends
+       WHERE entity_id = $1 AND metric_type = 'anomaly'
+       AND created_at > NOW() - INTERVAL '24 hours'
+       LIMIT 10`,
+      [entityId]
+    );
+
+    // Build context for recommendation engine
+    const context = {
+      recentAttacks: attacksResult.rows,
+      healthScore: healthResult.rows[0]?.health_score || 80,
+      detectedAnomalies: anomaliesResult.rows,
+      sentimentTrend: 'stable' as const,
+    };
+
+    // Generate recommendations
+    const recommendations = recommendationEngine.recommendationEngine.generateRecommendations(
+      entityId,
+      context
+    );
+
+    // Save to database
+    for (const rec of recommendations) {
+      try {
+        await pool.query(
+          `INSERT INTO action_recommendations
+           (entity_id, recommendation_type, priority, title, description, suggested_action, confidence_score)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            entityId,
+            'auto_generated',
+            rec.priority,
+            rec.title,
+            rec.description,
+            rec.suggestedAction,
+            rec.confidenceScore,
+          ]
+        );
+      } catch (err: any) {
+        console.warn('⚠️  Could not save recommendation:', err.message);
+      }
+    }
+
+    console.log(`💡 Generated ${recommendations.length} recommendations for entity ${entityId}`);
+    res.json({ generated: recommendations.length, recommendations });
+  } catch (error) {
+    console.error('❌ Error generating recommendations:', error);
+    res.status(500).json({ error: 'Failed to generate recommendations' });
   }
 });
 

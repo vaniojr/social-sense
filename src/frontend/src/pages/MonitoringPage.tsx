@@ -77,11 +77,11 @@ export function MonitoringPage() {
     } finally {
       setLoading(false);
     }
-  }, [selectedId, filters, apiUrl]);
+  }, [selectedId, filters.days, filters.sentiment, filters.source, filters.region, apiUrl]);
 
   useEffect(() => {
     loadArticles();
-  }, [loadArticles]);
+  }, [selectedId, filters.days, filters.sentiment, filters.source, filters.region, apiUrl]);
 
   if (!selectedId) {
     return (

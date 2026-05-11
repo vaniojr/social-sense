@@ -35,7 +35,7 @@ export function AlertPreferences({ preferences, onPreferencesChange }: AlertPref
           <div className="ml-3 flex-1">
             <div className="font-semibold text-gray-900">📉 Queda de Sentimento</div>
             <div className="text-sm text-gray-600">
-              Alerta quando sentimento cai > 20% em 1 hora
+              Alerta quando sentimento cai &gt; 20% em 1 hora
             </div>
           </div>
         </label>

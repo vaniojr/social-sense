@@ -5,7 +5,10 @@ import { GeoAnalysis } from './pages/GeoAnalysis'
 import { NewsPage } from './pages/NewsPage'
 import { MonitoringPage } from './pages/MonitoringPage'
 import { SettingsPage } from './pages/SettingsPage'
-import { ChatWidget } from './components/ChatWidget'
+import { CompetitorsPage } from './pages/CompetitorsPage'
+import { TrendsPage } from './pages/TrendsPage'
+import { WarRoomDashboard } from './pages/WarRoomDashboard'
+import { EnhancedChatWidget } from './components/EnhancedChatWidget'
 
 function Navigation() {
   const location = useLocation()
@@ -60,6 +63,26 @@ function Navigation() {
               📊 Monitoramento
             </Link>
             <Link
+              to="/competitors"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/competitors'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              👥 Competidores
+            </Link>
+            <Link
+              to="/war-room"
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                location.pathname === '/war-room'
+                  ? 'bg-blue-100 text-blue-900'
+                  : 'text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              🎯 War Room
+            </Link>
+            <Link
               to="/settings"
               className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
                 location.pathname === '/settings'
@@ -98,7 +121,7 @@ function Layout() {
     <div className="min-h-screen bg-gray-50">
       <Navigation />
       <Outlet />
-      <ChatWidget />
+      <EnhancedChatWidget />
     </div>
   )
 }
@@ -127,6 +150,18 @@ const router = createBrowserRouter([
       {
         path: '/settings',
         element: <SettingsPage />,
+      },
+      {
+        path: '/competitors',
+        element: <CompetitorsPage />,
+      },
+      {
+        path: '/trends',
+        element: <TrendsPage />,
+      },
+      {
+        path: '/war-room',
+        element: <WarRoomDashboard />,
       },
     ],
   },
