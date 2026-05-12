@@ -40,8 +40,7 @@ export function MonitoringPage() {
 
     try {
       const params = new URLSearchParams({
-        entityId: selectedId,
-        limit: '50',
+        entity_id: selectedId,
         days: filters.days,
         ...(filters.sentiment !== 'all' && { sentiment: filters.sentiment }),
         ...(filters.source !== 'all' && { source: filters.source }),
