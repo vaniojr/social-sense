@@ -1471,10 +1471,10 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
 // GET /api/news - Retrieve news articles from database
 app.get('/api/news', async (req: Request, res: Response) => {
   try {
-    const { entityId, limit = '50', days = '7' } = req.query;
+    const { entity_id, limit = '50', days = '7' } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -1489,7 +1489,7 @@ app.get('/api/news', async (req: Request, res: Response) => {
         AND na.published_at > NOW() - INTERVAL '${parseInt(days as string)} days'
       ORDER BY na.published_at DESC
       LIMIT $2
-    `, [entityId, parseInt(limit as string)]);
+    `, [entity_id, parseInt(limit as string)]);
 
     console.log(`📰 Retrieved ${result.rows.length} news articles`);
     res.json({ articles: result.rows, total: result.rows.length });

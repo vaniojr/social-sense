@@ -61,6 +61,7 @@ export const CreateEntitySchema = z.object({
   url: z
     .string()
     .url('Invalid URL')
+    .or(z.literal(''))
     .optional(),
 });
 
