@@ -4,12 +4,12 @@ import dotenv from 'dotenv';
 import { Pool } from 'pg';
 import Anthropic from '@anthropic-ai/sdk';
 import axios from 'axios';
-import { validateDaysParameter, isValidUUID, isValidStateCode } from './utils/query-validation';
+import { validateDaysParameter, isValidUUID, isValidStateCode } from './utils/query-validation.js';
 import {
   validateBody,
   validateParams,
   validateQuery,
-} from './middleware/validation-middleware';
+} from './middleware/validation-middleware.js';
 import {
   CreateEntitySchema,
   UpdateEntitySchema,
@@ -17,7 +17,7 @@ import {
   CreateChatSchema,
   CreateCompetitorGroupSchema,
   FetchNewsSchema,
-} from './schemas/validation';
+} from './schemas/validation.js';
 
 dotenv.config();
 
