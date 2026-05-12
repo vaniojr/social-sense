@@ -1,5 +1,7 @@
-import { RouterProvider, createBrowserRouter, Outlet, Link, useLocation } from 'react-router-dom'
-import { EntityProvider, useEntity } from './context/EntityContext'
+import { RouterProvider, createBrowserRouter, Outlet } from 'react-router-dom'
+import { EntityProvider } from './context/EntityContext'
+import { Sidebar } from './components/Sidebar'
+import { EnhancedChatWidget } from './components/EnhancedChatWidget'
 import { Dashboard } from './pages/Dashboard'
 import { GeoAnalysis } from './pages/GeoAnalysis'
 import { NewsPage } from './pages/NewsPage'
@@ -9,129 +11,15 @@ import { CompetitorsPage } from './pages/CompetitorsPage'
 import { TrendsPage } from './pages/TrendsPage'
 import { WarRoomDashboard } from './pages/WarRoomDashboard'
 import { EntitiesPage } from './pages/EntitiesPage'
-import { EnhancedChatWidget } from './components/EnhancedChatWidget'
 
-function Navigation() {
-  const location = useLocation()
-  const { entities, selectedId, setSelectedId, loading } = useEntity()
-
-  return (
-    <nav className="bg-white shadow-md">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
-            <h1 className="text-2xl font-bold text-gray-900">Social Sense</h1>
-          </div>
-          <div className="flex gap-1 items-center">
-            <Link
-              to="/"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              📊 Dashboard
-            </Link>
-            <Link
-              to="/entities"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/entities'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              📋 Entidades
-            </Link>
-            <Link
-              to="/geo"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/geo'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              🗺️ Análise Geográfica
-            </Link>
-            <Link
-              to="/news"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/news'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              📰 Notícias
-            </Link>
-            <Link
-              to="/monitor"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/monitor'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              📊 Monitoramento
-            </Link>
-            <Link
-              to="/competitors"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/competitors'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              👥 Competidores
-            </Link>
-            <Link
-              to="/war-room"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/war-room'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              🎯 War Room
-            </Link>
-            <Link
-              to="/settings"
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                location.pathname === '/settings'
-                  ? 'bg-blue-100 text-blue-900'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              ⚙️ Configurações
-            </Link>
-            <div className="ml-6 border-l border-gray-200 pl-6">
-              <label className="text-xs font-semibold text-gray-600 block mb-1">Entidade</label>
-              <select
-                value={selectedId}
-                onChange={e => setSelectedId(e.target.value)}
-                disabled={loading}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-              >
-                {loading && <option>Carregando...</option>}
-                {entities.map(entity => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.name} ({entity.type})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-      </div>
-    </nav>
-  )
-}
-
-// Layout component wrapping all routes
+// Layout component wrapping all routes with new Sidebar design
 function Layout() {
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <Outlet />
+    <div className="min-h-screen bg-gray-50 flex">
+      <Sidebar />
+      <main className="flex-1 overflow-auto">
+        <Outlet />
+      </main>
       <EnhancedChatWidget />
     </div>
   )
