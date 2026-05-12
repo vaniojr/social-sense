@@ -26,8 +26,10 @@ export function CompetitorComparison({ groupId, apiUrl, entities }: CompetitorCo
           `${apiUrl}/api/competitors/sentiment-comparison?groupId=${groupId}&days=${dateRange}`
         );
         if (!response.ok) {
-          console.error('❌ Error fetching comparison: HTTP', response.status);
-          setError('Não foi possível carregar os dados');
+          if (response.status >= 500) {
+            console.error('❌ Error fetching comparison: HTTP', response.status);
+            setError('Não foi possível carregar os dados');
+          }
           setTimelineData([]);
           return;
         }
