@@ -113,8 +113,9 @@ export function PerformanceMetricsChart({ entityId, apiUrl }: PerformanceMetrics
     return null;
   }
 
-  const formatValue = (value: number) => {
-    return `${value.toFixed(2)}${config.unit}`;
+  const formatValue = (value: number | undefined) => {
+    if (value === undefined || value === null) return '-';
+    return `${Number(value).toFixed(2)}${config.unit}`;
   };
 
   const getTrendIcon = (trend: string) => {
