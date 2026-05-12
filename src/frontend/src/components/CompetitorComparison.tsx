@@ -11,6 +11,7 @@ const COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6'];
 
 export function CompetitorComparison({ groupId, apiUrl, entities }: CompetitorComparisonProps) {
   const [timelineData, setTimelineData] = useState<any[]>([]);
+  const [comparison, setComparison] = useState<any>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState(7);
@@ -34,6 +35,7 @@ export function CompetitorComparison({ groupId, apiUrl, entities }: CompetitorCo
           return;
         }
         const data = await response.json();
+        setComparison(data.comparison || {});
         setTimelineData(data.timeline || []);
       } catch (err) {
         console.error('❌ Error fetching comparison:', err);
@@ -142,18 +144,21 @@ export function CompetitorComparison({ groupId, apiUrl, entities }: CompetitorCo
               labelFormatter={(label: string) => `Data: ${label}`}
             />
             <Legend />
-            {entities.slice(0, 5).map((entity, idx) => (
-              <Line
-                key={entity.id}
-                yAxisId={idx % 2 === 0 ? 'left' : 'right'}
-                type="monotone"
-                dataKey={entity.id}
-                stroke={COLORS[idx % COLORS.length]}
-                dot={false}
-                name={entity.name}
-                isAnimationActive={false}
-              />
-            ))}
+            {entities
+              .filter((entity) => comparison[entity.id])
+              .slice(0, 5)
+              .map((entity, idx) => (
+                <Line
+                  key={entity.id}
+                  yAxisId={idx % 2 === 0 ? 'left' : 'right'}
+                  type="monotone"
+                  dataKey={entity.id}
+                  stroke={COLORS[idx % COLORS.length]}
+                  dot={false}
+                  name={entity.name}
+                  isAnimationActive={false}
+                />
+              ))}
           </LineChart>
         </ResponsiveContainer>
       )}
