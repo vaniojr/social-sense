@@ -16,6 +16,7 @@ interface EntityContextType {
   setSelectedId: (id: string) => void;
   selected: Entity | undefined;
   loading: boolean;
+  refreshEntities: () => Promise<void>;
 }
 
 const EntityContext = createContext<EntityContextType | undefined>(undefined);
@@ -26,30 +27,34 @@ export function EntityProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
-  useEffect(() => {
-    const loadEntities = async () => {
-      try {
-        const response = await fetch(`${apiUrl}/api/entities`);
-        if (!response.ok) throw new Error('Failed to load entities');
-        const data = await response.json();
-        setEntities(data);
-        if (data.length > 0 && !selectedId) {
-          setSelectedId(data[0].id);
-        }
-      } catch (err) {
-        console.error('Error loading entities:', err);
-      } finally {
-        setLoading(false);
+  const loadEntities = async () => {
+    try {
+      const response = await fetch(`${apiUrl}/api/entities`);
+      if (!response.ok) throw new Error('Failed to load entities');
+      const data = await response.json();
+      setEntities(data);
+      if (data.length > 0 && !selectedId) {
+        setSelectedId(data[0].id);
       }
-    };
+    } catch (err) {
+      console.error('Error loading entities:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
+  const refreshEntities = async () => {
+    await loadEntities();
+  };
+
+  useEffect(() => {
     loadEntities();
   }, [apiUrl]);
 
   const selected = entities.find(e => e.id === selectedId);
 
   return (
-    <EntityContext.Provider value={{ entities, selectedId, setSelectedId, selected, loading }}>
+    <EntityContext.Provider value={{ entities, selectedId, setSelectedId, selected, loading, refreshEntities }}>
       {children}
     </EntityContext.Provider>
   );
