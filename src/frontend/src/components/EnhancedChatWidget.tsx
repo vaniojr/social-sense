@@ -86,9 +86,9 @@ export function EnhancedChatWidget() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          entityId: selectedId,
+          entity_id: selectedId,
           message: userMessage,
-          conversationId: currentConversationId,
+          context: {},
         }),
       });
 
