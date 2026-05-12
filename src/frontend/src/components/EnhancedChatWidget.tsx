@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useEntity } from '../context/EntityContext';
+import ReactMarkdown from 'react-markdown';
 
 interface Message {
   id: string;
@@ -55,6 +56,8 @@ export function EnhancedChatWidget() {
       if (response.ok) {
         const data = await response.json();
         setConversations(data.conversations || []);
+      } else if (response.status !== 404) {
+        console.error('❌ Error loading conversations:', response.status);
       }
     } catch (err) {
       console.error('❌ Error loading conversations:', err);
@@ -68,6 +71,8 @@ export function EnhancedChatWidget() {
       if (response.ok) {
         const data = await response.json();
         setMessages(data.messages || []);
+      } else if (response.status !== 404) {
+        console.error('❌ Error loading conversation:', response.status);
       }
     } catch (err) {
       console.error('❌ Error loading conversation:', err);
@@ -114,6 +119,8 @@ export function EnhancedChatWidget() {
           setCurrentConversationId(data.conversationId);
           await loadConversations();
         }
+      } else {
+        console.error('❌ Error sending message:', response.status);
       }
     } catch (err) {
       console.error('❌ Error sending message:', err);
@@ -219,9 +226,9 @@ export function EnhancedChatWidget() {
                 <p>Comece uma conversa sobre sentimento e tendências</p>
               </div>
             ) : (
-              messages.map(msg => (
+              messages.map((msg, idx) => (
                 <div
-                  key={msg.id}
+                  key={`${msg.role}-${idx}`}
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
@@ -231,7 +238,32 @@ export function EnhancedChatWidget() {
                         : 'bg-gray-100 text-gray-900'
                     }`}
                   >
-                    {msg.content}
+                    {msg.role === 'assistant' ? (
+                      <ReactMarkdown
+                        components={{
+                          p: ({ node, ...props }) => <p {...props} className="mb-1" />,
+                          strong: ({ node, ...props }) => <strong {...props} className="font-bold" />,
+                          em: ({ node, ...props }) => <em {...props} className="italic" />,
+                          h1: ({ node, ...props }) => <h1 {...props} className="text-lg font-bold mb-1" />,
+                          h2: ({ node, ...props }) => <h2 {...props} className="text-base font-bold mb-1" />,
+                          h3: ({ node, ...props }) => <h3 {...props} className="text-sm font-bold mb-1" />,
+                          ul: ({ node, ...props }) => <ul {...props} className="list-disc list-inside mb-1" />,
+                          ol: ({ node, ...props }) => <ol {...props} className="list-decimal list-inside mb-1" />,
+                          li: ({ node, ...props }) => <li {...props} className="mb-0" />,
+                          code: ({ node, inline, ...props }) => (
+                            inline ? (
+                              <code {...props} className="bg-gray-200 px-1 rounded text-xs" />
+                            ) : (
+                              <code {...props} className="block bg-gray-200 p-1 rounded text-xs overflow-x-auto" />
+                            )
+                          ),
+                        }}
+                      >
+                        {msg.content}
+                      </ReactMarkdown>
+                    ) : (
+                      msg.content
+                    )}
                   </div>
                 </div>
               ))

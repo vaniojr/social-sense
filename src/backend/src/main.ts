@@ -1813,10 +1813,10 @@ import * as exportGenerator from './utils/export-generator.js';
 // GET /api/chat/conversations - List conversations
 app.get('/api/chat/conversations', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -1833,7 +1833,7 @@ app.get('/api/chat/conversations', async (req: Request, res: Response) => {
       WHERE entity_id = $1 AND is_archived = FALSE
       ORDER BY updated_at DESC
       LIMIT 50
-    `, [entityId]);
+    `, [entity_id]);
 
     const conversations = result.rows.map((row: any) => ({
       id: row.id,
