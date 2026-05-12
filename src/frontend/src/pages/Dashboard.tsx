@@ -282,8 +282,8 @@ export function Dashboard() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">🔔 Alertas Recentes</h2>
                 <div className="space-y-3">
                   {alerts.length > 0 ? (
-                    alerts.map(alert => (
-                      <div key={alert.id} className="pb-3 border-b border-gray-200 last:border-b-0">
+                    alerts.map((alert, idx) => (
+                      <div key={alert.id || `alert-${idx}`} className="pb-3 border-b border-gray-200 last:border-b-0">
                         <div className="flex items-start gap-3">
                           <span className="text-xl">
                             {alert.severity === 'critical' ? '🔴' : alert.severity === 'high' ? '🔴' : alert.severity === 'medium' ? '🟡' : '🟢'}
