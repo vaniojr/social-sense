@@ -13,7 +13,7 @@ interface CompetitorGroupManagerProps {
   onGroupSelect: (groupId: string) => void;
   onGroupCreate: (name: string, description: string) => Promise<void>;
   onGroupDelete: (groupId: string) => Promise<void>;
-  onAddMember: (groupId: string, entityId: string, entityName: string) => Promise<void>;
+  onAddMember: (groupId: string, entityId: string) => Promise<void>;
   onRemoveMember: (groupId: string, entityId: string) => Promise<void>;
   allEntities: Array<{ id: string; name: string }>;
   apiUrl: string;
@@ -66,12 +66,11 @@ export function CompetitorGroupManager({
   };
 
   const handleAddMember = async (entityId: string) => {
-    const entity = allEntities.find((e) => e.id === entityId);
-    if (!selectedGroupId || !entity) return;
+    if (!selectedGroupId) return;
 
     setLoading(true);
     try {
-      await onAddMember(selectedGroupId, entityId, entity.name);
+      await onAddMember(selectedGroupId, entityId);
       // Reload members
       await handleSelectGroup(selectedGroupId);
     } catch (err) {

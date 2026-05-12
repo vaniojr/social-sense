@@ -81,12 +81,12 @@ export function CompetitorsPage() {
     }
   };
 
-  const handleAddMember = async (groupId: string, entityId: string, entityName: string) => {
+  const handleAddMember = async (groupId: string, entityId: string) => {
     try {
       const response = await fetch(`${apiUrl}/api/competitor-groups/${groupId}/members`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity_id: entityId, entity_name: entityName }),
+        body: JSON.stringify({ entityId }),
       });
       if (response.ok) {
         await loadGroups();
