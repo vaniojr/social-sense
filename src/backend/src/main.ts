@@ -917,11 +917,11 @@ import * as trendAnalysis from './utils/trend-analysis.js';
 // GET /api/trends/timeline - Timeline with sentiment, volume, and anomalies
 app.get('/api/trends/timeline', async (req: Request, res: Response) => {
   try {
-    const { entityId, days = '30' } = req.query;
+    const { entity_id, days = '30' } = req.query;
     const daysParam = parseInt(days as string) || 30;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -940,7 +940,7 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
         AND ss.created_at > NOW() - INTERVAL '1 day' * $2
       GROUP BY DATE(ss.created_at)
       ORDER BY DATE(ss.created_at)
-    `, [entityId, validatedDays]);
+    `, [entity_id, validatedDays]);
 
     const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
       date: row.date,
@@ -971,11 +971,11 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
 // GET /api/trends/anomalies - Detect anomalies
 app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
   try {
-    const { entityId, sensitivity = '2.5' } = req.query;
+    const { entity_id, sensitivity = '2.5' } = req.query;
     const sensParam = parseFloat(sensitivity as string) || 2.5;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -990,7 +990,7 @@ app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
         AND ss.created_at > NOW() - INTERVAL '90 days'
       GROUP BY DATE(ss.created_at)
       ORDER BY DATE(ss.created_at)
-    `, [entityId]);
+    `, [entity_id]);
 
     const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
       date: row.date,
@@ -1014,11 +1014,11 @@ app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
 // GET /api/trends/theme-evolution - Track theme evolution
 app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
   try {
-    const { entityId, days = '30' } = req.query;
+    const { entity_id, days = '30' } = req.query;
     const daysParam = parseInt(days as string) || 30;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -1035,7 +1035,7 @@ app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
         AND ss.themes IS NOT NULL
       GROUP BY DATE(ss.created_at), theme
       ORDER BY DATE(ss.created_at)
-    `, [entityId, validatedDays]);
+    `, [entity_id, validatedDays]);
 
     const themeMap: { [key: string]: trendAnalysis.ThemeEvolution } = {};
 
