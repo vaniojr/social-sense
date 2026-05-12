@@ -54,7 +54,7 @@ export function StateRankingTable({ states, onStateClick, selectedState }: State
           <tbody className="divide-y divide-gray-200">
             {sortedStates.map((state, index) => (
               <tr
-                key={state.state_code}
+                key={`state-${index}`}
                 onClick={() => onStateClick && onStateClick(state.state_code)}
                 className={`cursor-pointer transition-colors ${
                   selectedState === state.state_code

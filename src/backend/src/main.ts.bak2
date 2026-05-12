@@ -2216,10 +2216,10 @@ app.post('/api/events', async (req: Request, res: Response) => {
 // GET /api/events - Get real-time events
 app.get('/api/events', async (req: Request, res: Response) => {
   try {
-    const { entity_id, severity, limit = '50' } = req.query;
+    const { entityId, severity, limit = '50' } = req.query;
 
-    if (!entity_id) {
-      res.status(400).json({ error: 'entity_id required' });
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
       return;
     }
 
@@ -2227,7 +2227,7 @@ app.get('/api/events', async (req: Request, res: Response) => {
       SELECT * FROM real_time_events
       WHERE entity_id = $1
     `;
-    const params: any[] = [entity_id];
+    const params: any[] = [entityId];
 
     if (severity) {
       query += ` AND severity = $${params.length + 1}`;
@@ -2273,10 +2273,10 @@ app.post('/api/events/:id/acknowledge', async (req: Request, res: Response) => {
 // GET /api/attacks - Get attack detection status
 app.get('/api/attacks', async (req: Request, res: Response) => {
   try {
-    const { entity_id } = req.query;
+    const { entityId } = req.query;
 
-    if (!entity_id) {
-      res.status(400).json({ error: 'entity_id required' });
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
       return;
     }
 
@@ -2292,7 +2292,7 @@ app.get('/api/attacks', async (req: Request, res: Response) => {
         AND created_at > NOW() - INTERVAL '24 hours'
       ORDER BY created_at DESC
       LIMIT 100
-    `, [entity_id]);
+    `, [entityId]);
 
     // Analyze for attack patterns
     const events = result.rows;
@@ -2357,11 +2357,11 @@ app.post('/api/metrics', async (req: Request, res: Response) => {
 // GET /api/metrics - Get metrics with stats
 app.get('/api/metrics', async (req: Request, res: Response) => {
   try {
-    const { entity_id, metricName, hours = '24' } = req.query;
+    const { entityId, metricName, hours = '24' } = req.query;
     const hoursParam = parseInt(hours as string) || 24;
 
-    if (!entity_id || !metricName) {
-      res.status(400).json({ error: 'entity_id and metricName required' });
+    if (!entityId || !metricName) {
+      res.status(400).json({ error: 'entityId and metricName required' });
       return;
     }
 
@@ -2373,7 +2373,7 @@ app.get('/api/metrics', async (req: Request, res: Response) => {
         AND created_at > NOW() - INTERVAL '${hoursParam} hours'
       ORDER BY created_at DESC
       LIMIT 1000
-    `, [entity_id, metricName]);
+    `, [entityId, metricName]);
 
     const values = result.rows.map((r: any) => r.metric_value);
     const stats = performanceAnalytics.calculateStats(values);
@@ -2407,10 +2407,10 @@ app.get('/api/metrics', async (req: Request, res: Response) => {
 // GET /api/health - Get overall system health
 app.get('/api/health-score', async (req: Request, res: Response) => {
   try {
-    const { entity_id } = req.query;
+    const { entityId } = req.query;
 
-    if (!entity_id) {
-      res.status(400).json({ error: 'entity_id required' });
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId required' });
       return;
     }
 
@@ -2421,7 +2421,7 @@ app.get('/api/health-score', async (req: Request, res: Response) => {
       WHERE entity_id = $1
         AND created_at > NOW() - INTERVAL '1 hour'
       ORDER BY metric_name, created_at DESC
-    `, [entity_id]);
+    `, [entityId]);
 
     const violations: any[] = [];
     const metrics: any[] = [];
@@ -2516,10 +2516,10 @@ import * as recommendationEngine from './utils/recommendation-engine.js';
 // GET /api/recommendations - Get active recommendations for entity
 app.get('/api/recommendations', async (req: Request, res: Response) => {
   try {
-    const { entity_id } = req.query;
+    const { entityId } = req.query;
 
-    if (!entity_id) {
-      res.status(400).json({ error: 'entity_id query parameter required' });
+    if (!entityId) {
+      res.status(400).json({ error: 'entityId query parameter required' });
       return;
     }
 
@@ -2537,10 +2537,10 @@ app.get('/api/recommendations', async (req: Request, res: Response) => {
       WHERE entity_id = $1 AND is_acknowledged = FALSE
       ORDER BY created_at DESC
       LIMIT 10`,
-      [entity_id]
+      [entityId]
     );
 
-    console.log(`💡 Retrieved ${result.rows.length} recommendations for entity ${entity_id}`);
+    console.log(`💡 Retrieved ${result.rows.length} recommendations for entity ${entityId}`);
     res.json({ recommendations: result.rows });
   } catch (error) {
     console.error('❌ Error fetching recommendations:', error);

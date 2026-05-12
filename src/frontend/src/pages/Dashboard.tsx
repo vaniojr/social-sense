@@ -88,7 +88,7 @@ export function Dashboard() {
         setData(result);
 
         // Fetch alerts
-        const alertsUrl = `${apiUrl}/api/alerts?entity_id=${selectedId}&limit=5`;
+        const alertsUrl = `${apiUrl}/api/alerts?entity_id=${selectedId}`;
         const alertsResponse = await fetch(alertsUrl);
         if (alertsResponse.ok) {
           const alertsData = await alertsResponse.json();
@@ -283,7 +283,7 @@ export function Dashboard() {
                 <div className="space-y-3">
                   {alerts.length > 0 ? (
                     alerts.map((alert, idx) => (
-                      <div key={alert.id || `alert-${idx}`} className="pb-3 border-b border-gray-200 last:border-b-0">
+                      <div key={`alert-${idx}`} className="pb-3 border-b border-gray-200 last:border-b-0">
                         <div className="flex items-start gap-3">
                           <span className="text-xl">
                             {alert.severity === 'critical' ? '🔴' : alert.severity === 'high' ? '🔴' : alert.severity === 'medium' ? '🟡' : '🟢'}
@@ -312,7 +312,7 @@ export function Dashboard() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">⬆️ Top 5 Melhores Estados</h2>
                 <div className="space-y-2">
                   {topBest.map((state, idx) => (
-                    <div key={state.state_code} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                    <div key={`best-${idx}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
                       <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900">
@@ -333,7 +333,7 @@ export function Dashboard() {
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">⬇️ Top 5 Piores Estados</h2>
                 <div className="space-y-2">
                   {topWorst.map((state, idx) => (
-                    <div key={state.state_code} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
+                    <div key={`worst-${idx}`} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded">
                       <span className="font-bold text-gray-400 w-6">#{idx + 1}</span>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-gray-900">

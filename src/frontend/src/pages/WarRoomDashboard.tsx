@@ -96,7 +96,7 @@ export function WarRoomDashboard() {
     <div className="p-6">
       {/* Header */}
       <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">🎯 War Room - Fase 3</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">🎯 War Room</h1>
         <p className="text-gray-600">
           Monitoramento em tempo real, detecção de ataques, análise de performance e recomendações de ação
         </p>
@@ -121,7 +121,7 @@ export function WarRoomDashboard() {
         {/* Action Recommendations (Bloco L) */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
-            💡 Recomendações de Ação (Bloco L)
+            💡 Recomendações de Ação
           </h3>
 
           {recommendations.length === 0 ? (
