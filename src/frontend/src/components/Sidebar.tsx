@@ -37,7 +37,6 @@ const navigationItems: NavItem[] = [
   },
   {
     label: 'Cadastros',
-    icon: '📋',
     path: '/entities',
     icon: '📋',
   },
