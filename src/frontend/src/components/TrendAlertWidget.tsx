@@ -19,27 +19,21 @@ export function TrendAlertWidget({ entityId, apiUrl }: TrendAlertWidgetProps) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Simulated alerts since we don't have a GET endpoint for trend_alerts
-    // In production, would fetch from /api/trends/alerts?entityId=:id
-    const mockAlerts: TrendAlert[] = [
-      {
-        id: '1',
-        alert_type: 'emerging_trend',
-        severity: 'high',
-        description: 'Nova tendência detectada: "economia"',
-        detected_at: new Date().toISOString(),
-        is_dismissed: false,
-      },
-      {
-        id: '2',
-        alert_type: 'reversal',
-        severity: 'medium',
-        description: 'Inversão de tendência: sentimento mudou de positivo para negativo',
-        detected_at: new Date(Date.now() - 3600000).toISOString(),
-        is_dismissed: false,
-      },
-    ];
-    setAlerts(mockAlerts);
+    const fetchAlerts = async () => {
+      setLoading(true);
+      try {
+        const response = await fetch(`${apiUrl}/api/trends/alerts?entityId=${entityId}`);
+        if (!response.ok) throw new Error('Erro ao carregar alertas');
+        const data = await response.json();
+        setAlerts(data.alerts || []);
+      } catch (err) {
+        console.error('❌ Error fetching alerts:', err);
+        setAlerts([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAlerts();
   }, [entityId, apiUrl]);
 
   const handleDismiss = async (alertId: string) => {

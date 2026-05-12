@@ -34,24 +34,20 @@ export function ThemeEvolutionChart({ entityId, apiUrl, days }: ThemeEvolutionCh
       const response = await fetch(`${apiUrl}/api/trends/theme-evolution?entityId=${entityId}&days=${days}`);
       if (!response.ok) throw new Error('Erro ao carregar temas');
       const result = await response.json();
-      const themeData = result.themes && result.themes.length > 0 ? result.themes : getDefaultMockData();
-      setThemes(themeData);
-      if (themeData.length > 0) {
-        setSelectedTheme(themeData[0].name);
+      setThemes(result.themes || []);
+      if (result.themes?.length > 0) {
+        setSelectedTheme(result.themes[0].name);
       }
     } catch (err) {
       console.error('❌ Error fetching themes:', err);
-      const mockData = getDefaultMockData();
-      setThemes(mockData);
-      if (mockData.length > 0) {
-        setSelectedTheme(mockData[0].name);
-      }
+      setError(err instanceof Error ? err.message : 'Erro ao carregar dados');
+      setThemes([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const getDefaultMockData = (): Theme[] => [
+  const UNUSED_getDefaultMockData = (): Theme[] => [
     {
       name: 'Economia',
       volume_timeline: [
