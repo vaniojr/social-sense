@@ -44,7 +44,7 @@ export function GeoAnalysis() {
       setError(null);
       try {
         const url = selectedId
-          ? `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`
+          ? `${apiUrl}/api/geo/regional-sentiment?entity_id=${selectedId}`
           : `${apiUrl}/api/geo/regional-sentiment`;
 
         const response = await fetch(url);

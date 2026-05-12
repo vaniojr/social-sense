@@ -41,7 +41,7 @@ export function HealthScoreDashboard({
   const loadHealth = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/health-score?entityId=${entityId}`);
+      const response = await fetch(`${apiUrl}/api/health-score?entity_id=${entityId}`);
       if (response.ok) {
         const data = await response.json();
         setHealth(data);

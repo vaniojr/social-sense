@@ -33,7 +33,7 @@ export function ChatSearchPanel({
     setLoading(true);
     try {
       const response = await fetch(
-        `${apiUrl}/api/chat/search?entityId=${entityId}&q=${encodeURIComponent(query)}`
+        `${apiUrl}/api/chat/search?entity_id=${entityId}&q=${encodeURIComponent(query)}`
       );
       if (response.ok) {
         const data = await response.json();

@@ -33,7 +33,7 @@ export function AttackDetectionPanel({
   const loadAttackStatus = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${apiUrl}/api/attacks?entityId=${entityId}`);
+      const response = await fetch(`${apiUrl}/api/attacks?entity_id=${entityId}`);
       if (response.ok) {
         const data = await response.json();
         setStatus(data);

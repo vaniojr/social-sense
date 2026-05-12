@@ -28,7 +28,7 @@ export function AnomalyDetector({ entityId, apiUrl, sensitivity }: AnomalyDetect
     setError(null);
     try {
       const response = await fetch(
-        `${apiUrl}/api/trends/anomalies?entityId=${entityId}&sensitivity=${sensitivity}`
+        `${apiUrl}/api/trends/anomalies?entity_id=${entityId}&sensitivity=${sensitivity}`
       );
       if (!response.ok) throw new Error('Erro ao carregar anomalias');
       const result = await response.json();

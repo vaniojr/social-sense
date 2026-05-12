@@ -51,7 +51,7 @@ export function EnhancedChatWidget() {
   const loadConversations = async () => {
     if (!selectedId) return;
     try {
-      const response = await fetch(`${apiUrl}/api/chat/conversations?entityId=${selectedId}`);
+      const response = await fetch(`${apiUrl}/api/chat/conversations?entity_id=${selectedId}`);
       if (response.ok) {
         const data = await response.json();
         setConversations(data.conversations || []);

@@ -33,7 +33,7 @@ export function WarRoomDashboard() {
     try {
       // Load recommendations
       const recsResponse = await fetch(
-        `${apiUrl}/api/recommendations?entityId=${selectedId}`
+        `${apiUrl}/api/recommendations?entity_id=${selectedId}`
       );
       if (recsResponse.ok) {
         const recsData = await recsResponse.json();

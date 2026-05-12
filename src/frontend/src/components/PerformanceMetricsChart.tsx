@@ -87,7 +87,7 @@ export function PerformanceMetricsChart({ entityId, apiUrl }: PerformanceMetrics
 
       for (const metricName of metricNames) {
         const response = await fetch(
-          `${apiUrl}/api/metrics?entityId=${entityId}&metricName=${metricName}&hours=24`
+          `${apiUrl}/api/metrics?entity_id=${entityId}&metricName=${metricName}&hours=24`
         );
 
         if (response.ok) {

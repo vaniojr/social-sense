@@ -22,7 +22,7 @@ export function TrendAlertWidget({ entityId, apiUrl }: TrendAlertWidgetProps) {
     const fetchAlerts = async () => {
       setLoading(true);
       try {
-        const response = await fetch(`${apiUrl}/api/trends/alerts?entityId=${entityId}`);
+        const response = await fetch(`${apiUrl}/api/trends/alerts?entity_id=${entityId}`);
         if (!response.ok) {
           setAlerts([]);
           return;

@@ -50,7 +50,7 @@ export function NewsPage() {
       setLoading(true);
       setError(null);
       try {
-        const response = await fetch(`${apiUrl}/api/news?entityId=${selectedId}`);
+        const response = await fetch(`${apiUrl}/api/news?entity_id=${selectedId}`);
         if (!response.ok) throw new Error('Failed to load news');
         const data = await response.json();
         setArticles(data.articles || []);
@@ -85,7 +85,7 @@ export function NewsPage() {
       console.log(`✅ Fetched: ${data.fetched}, New: ${data.new}, Analyzed: ${data.analyzed}`);
 
       // Reload news list
-      const newsResponse = await fetch(`${apiUrl}/api/news?entityId=${selectedId}`);
+      const newsResponse = await fetch(`${apiUrl}/api/news?entity_id=${selectedId}`);
       const newsData = await newsResponse.json();
       setArticles(newsData.articles || []);
     } catch (err) {

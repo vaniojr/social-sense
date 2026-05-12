@@ -26,7 +26,7 @@ export function TimelineChart({ entityId, apiUrl, days }: TimelineChartProps) {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiUrl}/api/trends/timeline?entityId=${entityId}&days=${days}`);
+      const response = await fetch(`${apiUrl}/api/trends/timeline?entity_id=${entityId}&days=${days}`);
       if (!response.ok) throw new Error('Erro ao carregar timeline');
       const result = await response.json();
       setData(result.timeline || []);

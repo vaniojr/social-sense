@@ -31,7 +31,7 @@ export function ThemeEvolutionChart({ entityId, apiUrl, days }: ThemeEvolutionCh
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${apiUrl}/api/trends/theme-evolution?entityId=${entityId}&days=${days}`);
+      const response = await fetch(`${apiUrl}/api/trends/theme-evolution?entity_id=${entityId}&days=${days}`);
       if (!response.ok) {
         if (response.status >= 500) {
           console.error('❌ Error fetching themes: HTTP', response.status);

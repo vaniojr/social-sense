@@ -60,7 +60,7 @@ export function RealTimeEventsFeed({
   const loadEvents = async () => {
     setLoading(true);
     try {
-      let url = `${apiUrl}/api/events?entityId=${entityId}`;
+      let url = `${apiUrl}/api/events?entity_id=${entityId}`;
       if (filter) url += `&severity=${filter}`;
 
       const response = await fetch(url);

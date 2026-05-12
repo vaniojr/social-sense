@@ -75,7 +75,7 @@ export function Dashboard() {
     const loadData = async () => {
       setLoading(true);
       try {
-        const url = `${apiUrl}/api/geo/regional-sentiment?entityId=${selectedId}`;
+        const url = `${apiUrl}/api/geo/regional-sentiment?entity_id=${selectedId}`;
         console.log('📊 Dashboard: Fetching sentiment data from:', url);
         const response = await fetch(url);
         if (!response.ok) throw new Error('Failed to load data');
@@ -88,7 +88,7 @@ export function Dashboard() {
         setData(result);
 
         // Fetch alerts
-        const alertsUrl = `${apiUrl}/api/alerts?entityId=${selectedId}&limit=5`;
+        const alertsUrl = `${apiUrl}/api/alerts?entity_id=${selectedId}&limit=5`;
         const alertsResponse = await fetch(alertsUrl);
         if (alertsResponse.ok) {
           const alertsData = await alertsResponse.json();
