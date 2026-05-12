@@ -38,11 +38,8 @@ const navigationItems: NavItem[] = [
   {
     label: 'Cadastros',
     icon: '📋',
-    path: '#',
-    submenu: [
-      { label: 'Entidades', path: '/entities', icon: '🏢' },
-      { label: 'Grupos', path: '/competitor-groups', icon: '👫' },
-    ],
+    path: '/entities',
+    icon: '📋',
   },
   { label: 'Configurações', path: '/settings', icon: '⚙️' },
 ];
