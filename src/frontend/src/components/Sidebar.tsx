@@ -16,7 +16,6 @@ const navigationItems: NavItem[] = [
     icon: '📈',
     path: '#',
     submenu: [
-      { label: 'Sentimento', path: '/sentiment', icon: '💭' },
       { label: 'Tendências', path: '/trends', icon: '📉' },
       { label: 'Competição', path: '/competitors', icon: '👥' },
       { label: 'Geográfico', path: '/geo', icon: '🗺️' },

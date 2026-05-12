@@ -16,6 +16,7 @@ interface TrendAlertWidgetProps {
 
 export function TrendAlertWidget({ entityId, apiUrl }: TrendAlertWidgetProps) {
   const [alerts, setAlerts] = useState<TrendAlert[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     // Simulated alerts since we don't have a GET endpoint for trend_alerts

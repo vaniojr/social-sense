@@ -130,19 +130,19 @@ export function AttackDetectionPanel({
       <div className="grid grid-cols-3 gap-3 mb-4">
         <div className="bg-white rounded p-3">
           <div className="text-xs text-gray-600 mb-1">Severidade</div>
-          <div className="text-2xl font-bold">{status.severity.toFixed(0)}/100</div>
+          <div className="text-2xl font-bold">{Math.round(Number(status.severity))}/100</div>
           <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
             <div
               className={`h-2 rounded-full transition-all ${
-                status.severity > 80
+                Number(status.severity) > 80
                   ? 'bg-red-600'
-                  : status.severity > 70
+                  : Number(status.severity) > 70
                     ? 'bg-orange-600'
-                    : status.severity > 50
+                    : Number(status.severity) > 50
                       ? 'bg-yellow-600'
                       : 'bg-green-600'
               }`}
-              style={{ width: `${status.severity}%` }}
+              style={{ width: `${Math.min(100, Number(status.severity))}%` }}
             />
           </div>
         </div>
