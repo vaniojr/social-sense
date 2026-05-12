@@ -659,16 +659,16 @@ app.delete('/api/competitor-groups/:id', async (req: Request, res: Response) => 
 app.post('/api/competitor-groups/:id/members', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { entityId } = req.body;
+    const { entity_id } = req.body;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
     const result = await pool.query(
       'INSERT INTO competitor_group_members (group_id, entity_id) VALUES ($1, $2) ON CONFLICT DO NOTHING RETURNING *',
-      [id, entityId]
+      [id, entity_id]
     );
 
     if (result.rows.length === 0) {
@@ -677,21 +677,21 @@ app.post('/api/competitor-groups/:id/members', async (req: Request, res: Respons
     }
 
     console.log(`✅ Added member to competitor group`);
-    res.status(201).json({ id: result.rows[0].id, entity_id: entityId });
+    res.status(201).json({ id: result.rows[0].id, entity_id: entity_id });
   } catch (error) {
     console.error('❌ Error adding group member:', error);
     res.status(500).json({ error: 'Failed to add group member' });
   }
 });
 
-// DELETE /api/competitor-groups/:id/members/:entityId - Remove entity from group
-app.delete('/api/competitor-groups/:id/members/:entityId', async (req: Request, res: Response) => {
+// DELETE /api/competitor-groups/: entity_id - Remove entity from group
+app.delete('/api/competitor-groups/: entity_id', async (req: Request, res: Response) => {
   try {
-    const { id, entityId } = req.params;
+    const { id, entity_id } = req.params;
 
     const result = await pool.query(
       'DELETE FROM competitor_group_members WHERE group_id = $1 AND entity_id = $2 RETURNING *',
-      [id, entityId]
+      [id, entity_id]
     );
 
     if (result.rows.length === 0) {
@@ -712,9 +712,9 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
   try {
     const groupIdParam = req.query.groupId as string;
     const daysParam = (req.query.days as string) || '7';
-    const entityIdsParam = req.query.entityIds as string;
+    const entity_idsParam = req.query.entity_ids as string;
 
-    let entityIds: string[] = [];
+    let entity_ids: string[] = [];
 
     if (groupIdParam) {
       // Get entities from group
@@ -722,16 +722,16 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
         'SELECT entity_id FROM competitor_group_members WHERE group_id = $1',
         [groupIdParam]
       );
-      entityIds = result.rows.map((r: any) => r.entity_id);
-    } else if (entityIdsParam) {
+      entity_ids = result.rows.map((r: any) => r.entity_id);
+    } else if (entity_idsParam) {
       // Use provided entity IDs
-      entityIds = entityIdsParam.split(',');
+      entity_ids = entity_idsParam.split(',');
     } else {
-      res.status(400).json({ error: 'groupId or entityIds required' });
+      res.status(400).json({ error: entity_ids required' });
       return;
     }
 
-    if (entityIds.length === 0) {
+    if (entity_ids.length === 0) {
       res.status(400).json({ error: 'No entities found' });
       return;
     }
@@ -740,7 +740,7 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
     const comparison: any = {};
     const timelineMap: any = {};
 
-    for (const entityId of entityIds) {
+    for (const entity_id of entity_ids) {
       const validatedDays = validateDaysParameter(daysParam);
       const result = await pool.query(`
         SELECT
@@ -751,13 +751,13 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
         WHERE ss.entity_id = $1
           AND ss.created_at > NOW() - INTERVAL '1 day' * $2
         GROUP BY ss.state_code
-      `, [entityId, validatedDays]);
+      `, [entity_id, validatedDays]);
 
       const entityData = result.rows;
       const avgSentiment = entityData.reduce((sum: number, row: any) => sum + parseFloat(row.avg_sentiment || 0), 0) / Math.max(entityData.length, 1);
       const totalVolume = entityData.reduce((sum: number, row: any) => sum + parseInt(row.mention_volume), 0);
 
-      comparison[entityId] = {
+      comparison[entity_id] = {
         current_sentiment: parseFloat(avgSentiment.toFixed(2)),
         mention_volume: totalVolume,
         top_regions: entityData.slice(0, 3).map((row: any) => ({
@@ -776,20 +776,20 @@ app.get('/api/competitors/sentiment-comparison', async (req: Request, res: Respo
           AND ss.created_at > NOW() - INTERVAL '1 day' * $2
         GROUP BY DATE(ss.created_at)
         ORDER BY DATE(ss.created_at)
-      `, [entityId, validatedDays]);
+      `, [entity_id, validatedDays]);
 
       timelineResult.rows.forEach((row: any) => {
         const date = row.date;
         if (!timelineMap[date]) {
           timelineMap[date] = { date };
         }
-        timelineMap[date][entityId] = parseFloat(row.sentiment);
+        timelineMap[date][entity_id] = parseFloat(row.sentiment);
       });
     }
 
     const timeline = Object.values(timelineMap);
 
-    console.log(`📊 Competitor comparison: ${entityIds.length} entities`);
+    console.log(`📊 Competitor comparison: entity_ids.length} entities`);
     res.json({ comparison, timeline });
   } catch (error) {
     console.error('❌ Error fetching sentiment comparison:', error);
@@ -813,28 +813,28 @@ app.get('/api/competitors/market-share', async (req: Request, res: Response) => 
       [groupIdParam]
     );
 
-    const entityIds = groupResult.rows.map((r: any) => r.entity_id);
+    const entity_ids = groupResult.rows.map((r: any) => r.entity_id);
 
-    if (entityIds.length === 0) {
+    if (entity_ids.length === 0) {
       res.status(404).json({ error: 'No entities in group' });
       return;
     }
 
     // Get mention volume for each entity
     const marketShare = await Promise.all(
-      entityIds.map(async (entityId: string) => {
+      entity_ids.map(async (entity_id: string) => {
         const volResult = await pool.query(
           'SELECT COUNT(*) as volume FROM sentiment_scores WHERE entity_id = $1',
-          [entityId]
+          [entity_id]
         );
 
         const entityResult = await pool.query(
           'SELECT name FROM entities WHERE id = $1',
-          [entityId]
+          [entity_id]
         );
 
         return {
-          entity_id: entityId,
+          entity_id: entity_id,
           name: entityResult.rows[0]?.name || 'Unknown',
           volume: parseInt(volResult.rows[0].volume),
         };
@@ -848,7 +848,7 @@ app.get('/api/competitors/market-share', async (req: Request, res: Response) => 
       percentage: totalVolume > 0 ? parseFloat(((item.volume / totalVolume) * 100).toFixed(2)) : 0,
     }));
 
-    console.log(`📊 Market share calculated for ${entityIds.length} competitors`);
+    console.log(`📊 Market share calculated for ${entity_ids.length} competitors`);
     res.json({ market_share: withPercentage, total_volume: totalVolume });
   } catch (error) {
     console.error('❌ Error fetching market share:', error);
@@ -859,11 +859,11 @@ app.get('/api/competitors/market-share', async (req: Request, res: Response) => 
 // GET /api/competitors/head-to-head - Head-to-head comparison between 2 entities
 app.get('/api/competitors/head-to-head', async (req: Request, res: Response) => {
   try {
-    const entity1Param = req.query.entityId1 as string;
-    const entity2Param = req.query.entityId2 as string;
+    const entity_id_1 = req.query.entity_id1 as string;
+    const entity_id_2 = req.query.entity_id2 as string;
 
-    if (!entity1Param || !entity2Param) {
-      res.status(400).json({ error: 'entityId1 and entityId2 required' });
+    if (!entity_id_1 || !entity_id_2) {
+      res.status(400).json({ error: entity_id2 required' });
       return;
     }
 
@@ -873,14 +873,14 @@ app.get('/api/competitors/head-to-head', async (req: Request, res: Response) => 
       FROM sentiment_scores
       WHERE entity_id = $1
       GROUP BY state_code
-    `, [entity1Param]);
+    `, [entity_id_1]);
 
     const result2 = await pool.query(`
       SELECT state_code, AVG(sentiment_score) as sentiment
       FROM sentiment_scores
       WHERE entity_id = $1
       GROUP BY state_code
-    `, [entity2Param]);
+    `, [entity_id_2]);
 
     const map1: any = {};
     const map2: any = {};
@@ -899,8 +899,8 @@ app.get('/api/competitors/head-to-head', async (req: Request, res: Response) => 
 
     console.log(`⚔️  Head-to-head comparison completed`);
     res.json({
-      entity1_id: entity1Param,
-      entity2_id: entity2Param,
+      entity1_id: entity_id_1,
+      entity2_id: entity_id_2,
       stronger_in,
       weaker_in,
       neutral,
@@ -917,11 +917,11 @@ import * as trendAnalysis from './utils/trend-analysis.js';
 // GET /api/trends/timeline - Timeline with sentiment, volume, and anomalies
 app.get('/api/trends/timeline', async (req: Request, res: Response) => {
   try {
-    const { entityId, days = '30' } = req.query;
+    const { entity_id , days = '30' } = req.query;
     const daysParam = parseInt(days as string) || 30;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -940,7 +940,7 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
         AND ss.created_at > NOW() - INTERVAL '1 day' * $2
       GROUP BY DATE(ss.created_at)
       ORDER BY DATE(ss.created_at)
-    `, [entityId, validatedDays]);
+    `, [entity_id, validatedDays]);
 
     const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
       date: row.date,
@@ -971,11 +971,11 @@ app.get('/api/trends/timeline', async (req: Request, res: Response) => {
 // GET /api/trends/anomalies - Detect anomalies
 app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
   try {
-    const { entityId, sensitivity = '2.5' } = req.query;
+    const { entity_id , sensitivity = '2.5' } = req.query;
     const sensParam = parseFloat(sensitivity as string) || 2.5;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -990,7 +990,7 @@ app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
         AND ss.created_at > NOW() - INTERVAL '90 days'
       GROUP BY DATE(ss.created_at)
       ORDER BY DATE(ss.created_at)
-    `, [entityId]);
+    `, [entity_id]);
 
     const timeline: trendAnalysis.TimelinePoint[] = result.rows.map((row: any) => ({
       date: row.date,
@@ -1014,11 +1014,11 @@ app.get('/api/trends/anomalies', async (req: Request, res: Response) => {
 // GET /api/trends/theme-evolution - Track theme evolution
 app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
   try {
-    const { entityId, days = '30' } = req.query;
+    const { entity_id , days = '30' } = req.query;
     const daysParam = parseInt(days as string) || 30;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -1035,7 +1035,7 @@ app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
         AND ss.themes IS NOT NULL
       GROUP BY DATE(ss.created_at), theme
       ORDER BY DATE(ss.created_at)
-    `, [entityId, validatedDays]);
+    `, [entity_id, validatedDays]);
 
     const themeMap: { [key: string]: trendAnalysis.ThemeEvolution } = {};
 
@@ -1094,12 +1094,12 @@ app.post('/api/trends/alerts/:id/dismiss', async (req: Request, res: Response) =
 
 app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
     let query: string;
     const params: (string | undefined)[] = [];
 
-    if (entityId) {
+    if (entity_id) {
       query = `
         WITH latest_sentiment AS (
           SELECT
@@ -1123,7 +1123,7 @@ app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
         WHERE rn = 1
         ORDER BY avg_sentiment DESC
       `;
-      params.push(entityId as string);
+      params.push(entity_id as string);
     } else {
       query = `
         WITH latest_sentiment AS (
@@ -1180,16 +1180,16 @@ app.get('/api/geo/regional-sentiment', async (req: Request, res: Response) => {
 });
 
 // Sentiment endpoints (placeholder)
-app.get('/api/sentiment/:entityId', async (req: Request, res: Response) => {
+app.get('/api/sentiment/: entity_id', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.params;
+    const { entity_id } = req.params;
     const result = await pool.query(
       `SELECT region, state_code, AVG(sentiment_score) as avg_sentiment, COUNT(*) as volume
        FROM sentiment_scores
        WHERE entity_id = $1
        GROUP BY region, state_code
        ORDER BY avg_sentiment DESC`,
-      [entityId],
+      [entity_id],
     );
     res.json(result.rows);
   } catch (error) {
@@ -1343,14 +1343,14 @@ RETORNE JSON VÁLIDO (SEM MARKDOWN, SEM EXPLICAÇÃO):
 }
 
 // Helper function to generate alerts based on sentiment
-async function generateAlerts(entityId: string, pool: Pool) {
+async function generateAlerts(entity_id: string, pool: Pool) {
   try {
     const avgResult = await pool.query(`
       SELECT AVG(ss.sentiment_score) as avg_score, COUNT(*) as total
       FROM sentiment_scores ss
       WHERE ss.entity_id = $1
         AND ss.created_at > NOW() - INTERVAL '24 hours'
-    `, [entityId]);
+    `, [entity_id]);
 
     const avg = parseFloat(avgResult.rows[0]?.avg_score || '0');
     const total = parseInt(avgResult.rows[0]?.total || '0');
@@ -1360,7 +1360,7 @@ async function generateAlerts(entityId: string, pool: Pool) {
         INSERT INTO alerts (entity_id, title, description, severity, alert_type, sentiment_change, triggered_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
         ON CONFLICT DO NOTHING
-      `, [entityId,
+      `, [entity_id,
           'Sentimento crítico detectado',
           `Sentimento médio das últimas 24h: ${avg.toFixed(2)} (abaixo de -0.40)`,
           'critical',
@@ -1371,7 +1371,7 @@ async function generateAlerts(entityId: string, pool: Pool) {
         INSERT INTO alerts (entity_id, title, description, severity, alert_type, sentiment_change, triggered_at)
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
         ON CONFLICT DO NOTHING
-      `, [entityId,
+      `, [entity_id,
           'Sentimento em queda',
           `Sentimento médio das últimas 24h: ${avg.toFixed(2)}`,
           'medium',
@@ -1384,14 +1384,14 @@ async function generateAlerts(entityId: string, pool: Pool) {
 }
 
 // Helper function to aggregate regional sentiment data
-async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
+async function aggregateRegionalSentiment(entity_id: string, pool: Pool) {
   try {
-    console.log(`🗺️ Aggregating regional sentiment for entity ${entityId}...`);
+    console.log(`🗺️ Aggregating regional sentiment for entity ${entity_id }...`);
 
     // Delete old aggregated data for this entity to prevent duplicates
     await pool.query(
       'DELETE FROM regional_sentiment_aggregated WHERE entity_id = $1',
-      [entityId]
+      [entity_id]
     );
 
     // Define Brazilian states with their regions
@@ -1437,7 +1437,7 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
       GROUP BY COALESCE(ss.state_code, 'NATIONAL')
     `;
 
-    const aggregationResult = await pool.query(aggregationQuery, [entityId]);
+    const aggregationResult = await pool.query(aggregationQuery, [entity_id]);
     console.log(`📊 Found ${aggregationResult.rows.length} state groups to aggregate`);
 
     // Update regional_sentiment_aggregated table
@@ -1451,7 +1451,7 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
         INSERT INTO regional_sentiment_aggregated (entity_id, region, state_code, state_name, avg_sentiment, mention_volume, top_themes, last_updated)
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
       `, [
-        entityId,
+        entity_id,
         stateInfo.region,
         stateCode === 'NATIONAL' ? null : stateCode,
         stateInfo.state_name,
@@ -1471,10 +1471,10 @@ async function aggregateRegionalSentiment(entityId: string, pool: Pool) {
 // GET /api/news - Retrieve news articles from database
 app.get('/api/news', async (req: Request, res: Response) => {
   try {
-    const { entityId, limit = '50', days = '7' } = req.query;
+    const { entity_id , limit = '50', days = '7' } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -1489,7 +1489,7 @@ app.get('/api/news', async (req: Request, res: Response) => {
         AND na.published_at > NOW() - INTERVAL '${parseInt(days as string)} days'
       ORDER BY na.published_at DESC
       LIMIT $2
-    `, [entityId, parseInt(limit as string)]);
+    `, [entity_id, parseInt(limit as string)]);
 
     console.log(`📰 Retrieved ${result.rows.length} news articles`);
     res.json({ articles: result.rows, total: result.rows.length });
@@ -1527,7 +1527,7 @@ app.get('/api/news/filtered', validateQuery(FetchNewsSchema), async (req: Reques
         AND na.published_at > NOW() - INTERVAL '1 day' * $2
     `;
 
-    const params: (string | number)[] = [entityIdParam, validatedDays];
+    const params: entity_idParam, validatedDays];
     let paramIndex = 3;
 
     // Add sentiment filter
@@ -1572,17 +1572,17 @@ app.get('/api/news/filtered', validateQuery(FetchNewsSchema), async (req: Reques
 // POST /api/news/fetch - Fetch news from NewsAPI and save to database
 app.post('/api/news/fetch', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.body;
+    const { entity_id } = req.body;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
     // 1. Get entity data
     const entityResult = await pool.query(
       'SELECT name, type FROM entities WHERE id = $1',
-      [entityId]
+      [entity_id]
     );
 
     if (entityResult.rows.length === 0) {
@@ -1620,7 +1620,7 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
           ON CONFLICT (url) DO NOTHING
           RETURNING id
         `, [
-          entityId,
+          entity_id,
           article.title,
           article.description || '',
           article.url,
@@ -1643,7 +1643,7 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
             INSERT INTO sentiment_scores (entity_id, article_id, sentiment_score, themes, state_code)
             VALUES ($1, $2, $3, $4, $5)
           `, [
-            entityId,
+            entity_id,
             articleId,
             analysis.sentiment_score,
             analysis.themes,
@@ -1655,7 +1655,7 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
           console.warn(`⚠️  Failed to analyze article "${article.title.substring(0, 30)}...":`, (analysisError as Error).message);
           await pool.query(
             'INSERT INTO sentiment_scores (entity_id, article_id, sentiment_score) VALUES ($1, $2, $3)',
-            [entityId, articleId, 0]
+            [entity_id, articleId, 0]
           );
         }
       } catch (articleError) {
@@ -1664,10 +1664,10 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
     }
 
     // 5. Generate alerts
-    await generateAlerts(entityId, pool);
+    await generateAlerts(entity_id, pool);
 
     // 6. Aggregate regional sentiment for dashboard
-    await aggregateRegionalSentiment(entityId, pool);
+    await aggregateRegionalSentiment(entity_id, pool);
 
     console.log(`✅ News fetch complete: ${articles.length} found, ${newCount} new, ${analyzedCount} analyzed`);
     res.json({ fetched: articles.length, new: newCount, analyzed: analyzedCount });
@@ -1680,10 +1680,11 @@ app.post('/api/news/fetch', async (req: Request, res: Response) => {
 // GET /api/alerts - Retrieve alerts from database
 app.get('/api/alerts', async (req: Request, res: Response) => {
   try {
-    const { entityId, limit = '10' } = req.query;
+    const entity_id = req.query.entity_id as string;
+    const limit = req.query.limit as string || '10';
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: 'entity_id required' });
       return;
     }
 
@@ -1694,7 +1695,7 @@ app.get('/api/alerts', async (req: Request, res: Response) => {
       WHERE entity_id = $1 AND is_active = TRUE
       ORDER BY triggered_at DESC
       LIMIT $2
-    `, [entityId, parseInt(limit as string)]);
+    `, [entity_id, parseInt(limit)]);
 
     console.log(`🔔 Retrieved ${result.rows.length} alerts`);
     res.json({ alerts: result.rows });
@@ -1707,13 +1708,13 @@ app.get('/api/alerts', async (req: Request, res: Response) => {
 // Chat endpoint with Claude AI integration
 app.post('/api/chat', validateBody(CreateChatSchema), async (req: Request, res: Response) => {
   try {
-    const { entity_id: entityId, message, context } = req.body;
+    const { entity_id: entity_id, message, context } = req.body;
     const conversationId = (req.body as any).conversationId;
 
     // 1. Fetch entity data
     const entityResult = await pool.query(
       'SELECT name, type FROM entities WHERE id = $1',
-      [entityId]
+      [entity_id]
     );
     if (entityResult.rows.length === 0) {
       res.status(404).json({ error: 'Entity not found' });
@@ -1728,7 +1729,7 @@ app.post('/api/chat', validateBody(CreateChatSchema), async (req: Request, res: 
        WHERE entity_id = $1
        ORDER BY mention_volume DESC
        LIMIT 5`,
-      [entityId]
+      [entity_id]
     );
     const sentimentContext = sentimentResult.rows.length > 0
       ? sentimentResult.rows
@@ -1743,7 +1744,7 @@ app.post('/api/chat', validateBody(CreateChatSchema), async (req: Request, res: 
     if (conversationId) {
       const convResult = await pool.query(
         'SELECT messages FROM chat_conversations WHERE id = $1 AND entity_id = $2',
-        [conversationId, entityId]
+        [conversationId, entity_id]
       );
       if (convResult.rows.length > 0 && convResult.rows[0].messages) {
         history = convResult.rows[0].messages;
@@ -1790,7 +1791,7 @@ Cite números e regiões quando relevante.`;
     } else {
       const newConv = await pool.query(
         'INSERT INTO chat_conversations (entity_id, messages) VALUES ($1, $2) RETURNING id',
-        [entityId, JSON.stringify(updatedHistory)]
+        [entity_id, JSON.stringify(updatedHistory)]
       );
       convId = newConv.rows[0].id;
     }
@@ -1813,10 +1814,10 @@ import * as exportGenerator from './utils/export-generator.js';
 // GET /api/chat/conversations - List conversations
 app.get('/api/chat/conversations', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -1833,7 +1834,7 @@ app.get('/api/chat/conversations', async (req: Request, res: Response) => {
       WHERE entity_id = $1 AND is_archived = FALSE
       ORDER BY updated_at DESC
       LIMIT 50
-    `, [entityId]);
+    `, [entity_id]);
 
     const conversations = result.rows.map((row: any) => ({
       id: row.id,
@@ -1871,7 +1872,7 @@ app.get('/api/chat/conversations/:id', async (req: Request, res: Response) => {
     console.log(`📖 Retrieved conversation ${id}`);
     res.json({
       id: conversation.id,
-      entityId: conversation.entity_id,
+      entity_id: conversation.entity_id,
       title: conversation.title,
       isArchived: conversation.is_archived,
       tags: conversation.tags,
@@ -2141,10 +2142,10 @@ app.post('/api/chat/conversations/:id/export', async (req: Request, res: Respons
 // GET /api/chat/search - Search conversations
 app.get('/api/chat/search', async (req: Request, res: Response) => {
   try {
-    const { entityId, q } = req.query;
+    const { entity_id , q } = req.query;
 
-    if (!entityId || !q) {
-      res.status(400).json({ error: 'entityId and q (query) required' });
+    if (!entity_id || !q) {
+      res.status(400).json({ error: entity_id and q (query) required' });
       return;
     }
 
@@ -2167,7 +2168,7 @@ app.get('/api/chat/search', async (req: Request, res: Response) => {
       GROUP BY cc.id, cm.content
       ORDER BY cc.updated_at DESC
       LIMIT 20
-    `, [entityId, `%${query}%`]);
+    `, [entity_id, `%${query}%`]);
 
     const searchResults = result.rows.map((row: any) => ({
       conversationId: row.id,
@@ -2191,9 +2192,9 @@ import * as attackDetectionUtils from './utils/attack-detection-utils.js';
 // POST /api/events - Create real-time event
 app.post('/api/events', async (req: Request, res: Response) => {
   try {
-    const { entityId, eventType, severity, title, description, data } = req.body;
+    const { entity_id , eventType, severity, title, description, data } = req.body;
 
-    if (!entityId || !eventType || !severity || !title) {
+    if (!entity_id || !eventType || !severity || !title) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
@@ -2202,7 +2203,7 @@ app.post('/api/events', async (req: Request, res: Response) => {
       INSERT INTO real_time_events (entity_id, event_type, severity, title, description, data)
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
-    `, [entityId, eventType, severity, title, description, JSON.stringify(data || {})]);
+    `, [entity_id, eventType, severity, title, description, JSON.stringify(data || {})]);
 
     const event = result.rows[0];
     console.log(`📢 Event created: ${severity} - ${title}`);
@@ -2216,10 +2217,10 @@ app.post('/api/events', async (req: Request, res: Response) => {
 // GET /api/events - Get real-time events
 app.get('/api/events', async (req: Request, res: Response) => {
   try {
-    const { entityId, severity, limit = '50' } = req.query;
+    const { entity_id , severity, limit = '50' } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -2227,7 +2228,7 @@ app.get('/api/events', async (req: Request, res: Response) => {
       SELECT * FROM real_time_events
       WHERE entity_id = $1
     `;
-    const params: any[] = [entityId];
+    const params: entity_id];
 
     if (severity) {
       query += ` AND severity = $${params.length + 1}`;
@@ -2273,10 +2274,10 @@ app.post('/api/events/:id/acknowledge', async (req: Request, res: Response) => {
 // GET /api/attacks - Get attack detection status
 app.get('/api/attacks', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -2292,7 +2293,7 @@ app.get('/api/attacks', async (req: Request, res: Response) => {
         AND created_at > NOW() - INTERVAL '24 hours'
       ORDER BY created_at DESC
       LIMIT 100
-    `, [entityId]);
+    `, [entity_id]);
 
     // Analyze for attack patterns
     const events = result.rows;
@@ -2333,9 +2334,9 @@ import * as performanceAnalytics from './utils/performance-analytics.js';
 // POST /api/metrics - Record a metric
 app.post('/api/metrics', async (req: Request, res: Response) => {
   try {
-    const { entityId, metricName, metricValue, dimension } = req.body;
+    const { entity_id , metricName, metricValue, dimension } = req.body;
 
-    if (!entityId || !metricName || metricValue === undefined) {
+    if (!entity_id || !metricName || metricValue === undefined) {
       res.status(400).json({ error: 'Missing required fields' });
       return;
     }
@@ -2344,7 +2345,7 @@ app.post('/api/metrics', async (req: Request, res: Response) => {
       INSERT INTO system_metrics (entity_id, metric_name, metric_value, dimension)
       VALUES ($1, $2, $3, $4)
       RETURNING *
-    `, [entityId, metricName, metricValue, JSON.stringify(dimension || {})]);
+    `, [entity_id, metricName, metricValue, JSON.stringify(dimension || {})]);
 
     console.log(`📊 Metric recorded: ${metricName}=${metricValue}`);
     res.json(result.rows[0]);
@@ -2357,11 +2358,11 @@ app.post('/api/metrics', async (req: Request, res: Response) => {
 // GET /api/metrics - Get metrics with stats
 app.get('/api/metrics', async (req: Request, res: Response) => {
   try {
-    const { entityId, metricName, hours = '24' } = req.query;
+    const { entity_id , metricName, hours = '24' } = req.query;
     const hoursParam = parseInt(hours as string) || 24;
 
-    if (!entityId || !metricName) {
-      res.status(400).json({ error: 'entityId and metricName required' });
+    if (!entity_id || !metricName) {
+      res.status(400).json({ error: entity_id and metricName required' });
       return;
     }
 
@@ -2373,7 +2374,7 @@ app.get('/api/metrics', async (req: Request, res: Response) => {
         AND created_at > NOW() - INTERVAL '${hoursParam} hours'
       ORDER BY created_at DESC
       LIMIT 1000
-    `, [entityId, metricName]);
+    `, [entity_id, metricName]);
 
     const values = result.rows.map((r: any) => r.metric_value);
     const stats = performanceAnalytics.calculateStats(values);
@@ -2407,10 +2408,10 @@ app.get('/api/metrics', async (req: Request, res: Response) => {
 // GET /api/health - Get overall system health
 app.get('/api/health-score', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -2421,7 +2422,7 @@ app.get('/api/health-score', async (req: Request, res: Response) => {
       WHERE entity_id = $1
         AND created_at > NOW() - INTERVAL '1 hour'
       ORDER BY metric_name, created_at DESC
-    `, [entityId]);
+    `, [entity_id]);
 
     const violations: any[] = [];
     const metrics: any[] = [];
@@ -2462,11 +2463,11 @@ app.get('/api/health-score', async (req: Request, res: Response) => {
 app.get('/api/metrics/:metricName/trend', async (req: Request, res: Response) => {
   try {
     const { metricName } = req.params;
-    const { entityId, days = '7' } = req.query;
+    const { entity_id , days = '7' } = req.query;
     const daysParam = parseInt(days as string) || 7;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -2478,7 +2479,7 @@ app.get('/api/metrics/:metricName/trend', async (req: Request, res: Response) =>
         AND metric_name = $2
         AND created_at > NOW() - INTERVAL '1 day' * $3
       ORDER BY created_at
-    `, [entityId, metricName, validatedDays]);
+    `, [entity_id, metricName, validatedDays]);
 
     const values = result.rows.map((r: any) => r.metric_value);
     const dataPoints = result.rows.map((r: any) => ({
@@ -2516,10 +2517,10 @@ import * as recommendationEngine from './utils/recommendation-engine.js';
 // GET /api/recommendations - Get active recommendations for entity
 app.get('/api/recommendations', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.query;
+    const { entity_id } = req.query;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId query parameter required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id query parameter required' });
       return;
     }
 
@@ -2537,10 +2538,10 @@ app.get('/api/recommendations', async (req: Request, res: Response) => {
       WHERE entity_id = $1 AND is_acknowledged = FALSE
       ORDER BY created_at DESC
       LIMIT 10`,
-      [entityId]
+      [entity_id]
     );
 
-    console.log(`💡 Retrieved ${result.rows.length} recommendations for entity ${entityId}`);
+    console.log(`💡 Retrieved ${result.rows.length} recommendations for entity ${entity_id }`);
     res.json({ recommendations: result.rows });
   } catch (error) {
     console.error('❌ Error fetching recommendations:', error);
@@ -2632,10 +2633,10 @@ app.post('/api/recommendations/:id/dismiss', async (req: Request, res: Response)
 // POST /api/recommendations/generate - Generate recommendations based on current data
 app.post('/api/recommendations/generate', async (req: Request, res: Response) => {
   try {
-    const { entityId } = req.body;
+    const { entity_id } = req.body;
 
-    if (!entityId) {
-      res.status(400).json({ error: 'entityId required' });
+    if (!entity_id) {
+      res.status(400).json({ error: entity_id required' });
       return;
     }
 
@@ -2645,7 +2646,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
        WHERE entity_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
        ORDER BY severity DESC
        LIMIT 20`,
-      [entityId]
+      [entity_id]
     );
 
     const healthResult = await pool.query(
@@ -2657,7 +2658,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
           ELSE 100 END)
         FROM system_metrics
         WHERE entity_id = $1 AND created_at > NOW() - INTERVAL '24 hours') as health_score`,
-      [entityId]
+      [entity_id]
     );
 
     const anomaliesResult = await pool.query(
@@ -2665,7 +2666,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
        WHERE entity_id = $1 AND metric_type = 'anomaly'
        AND created_at > NOW() - INTERVAL '24 hours'
        LIMIT 10`,
-      [entityId]
+      [entity_id]
     );
 
     // Build context for recommendation engine
@@ -2678,7 +2679,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
 
     // Generate recommendations
     const recommendations = recommendationEngine.recommendationEngine.generateRecommendations(
-      entityId,
+      entity_id,
       context
     );
 
@@ -2690,7 +2691,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
            (entity_id, recommendation_type, priority, title, description, suggested_action, confidence_score)
            VALUES ($1, $2, $3, $4, $5, $6, $7)`,
           [
-            entityId,
+            entity_id,
             'auto_generated',
             rec.priority,
             rec.title,
@@ -2704,7 +2705,7 @@ app.post('/api/recommendations/generate', async (req: Request, res: Response) =>
       }
     }
 
-    console.log(`💡 Generated ${recommendations.length} recommendations for entity ${entityId}`);
+    console.log(`💡 Generated ${recommendations.length} recommendations for entity ${entity_id }`);
     res.json({ generated: recommendations.length, recommendations });
   } catch (error) {
     console.error('❌ Error generating recommendations:', error);
@@ -2743,9 +2744,9 @@ app.get('/', (req: Request, res: Response) => {
         create: 'POST /api/entities',
       },
       geographic_analysis: {
-        regional_sentiment: 'GET /api/geo/regional-sentiment?entityId=<UUID>',
+        regional_sentiment: entity_id=<UUID>',
       },
-      sentiment: 'GET /api/sentiment/:entityId',
+      sentiment: entity_id',
       chat: 'POST /api/chat',
     },
   });
