@@ -32,7 +32,12 @@ export function ThemeEvolutionChart({ entityId, apiUrl, days }: ThemeEvolutionCh
     setError(null);
     try {
       const response = await fetch(`${apiUrl}/api/trends/theme-evolution?entityId=${entityId}&days=${days}`);
-      if (!response.ok) throw new Error('Erro ao carregar temas');
+      if (!response.ok) {
+        console.error('❌ Error fetching themes: HTTP', response.status);
+        setError('Não foi possível carregar os dados');
+        setThemes([]);
+        return;
+      }
       const result = await response.json();
       setThemes(result.themes || []);
       if (result.themes?.length > 0) {

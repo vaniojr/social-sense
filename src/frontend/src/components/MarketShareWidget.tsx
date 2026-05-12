@@ -31,7 +31,12 @@ export function MarketShareWidget({ groupId, apiUrl }: MarketShareWidget) {
       setError(null);
       try {
         const response = await fetch(`${apiUrl}/api/competitors/market-share?groupId=${groupId}`);
-        if (!response.ok) throw new Error('Erro ao carregar market share');
+        if (!response.ok) {
+          console.error('❌ Error fetching market share: HTTP', response.status);
+          setError('Não foi possível carregar os dados');
+          setMarketShare([]);
+          return;
+        }
         const data = await response.json();
         setMarketShare(data.market_share || []);
       } catch (err) {

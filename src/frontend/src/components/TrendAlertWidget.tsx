@@ -23,7 +23,6 @@ export function TrendAlertWidget({ entityId, apiUrl }: TrendAlertWidgetProps) {
       setLoading(true);
       try {
         const response = await fetch(`${apiUrl}/api/trends/alerts?entityId=${entityId}`);
-        if (!response.ok) throw new Error('Erro ao carregar alertas');
         const data = await response.json();
         setAlerts(data.alerts || []);
       } catch (err) {
