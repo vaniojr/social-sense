@@ -23,6 +23,10 @@ export function TrendAlertWidget({ entityId, apiUrl }: TrendAlertWidgetProps) {
       setLoading(true);
       try {
         const response = await fetch(`${apiUrl}/api/trends/alerts?entityId=${entityId}`);
+        if (!response.ok) {
+          setAlerts([]);
+          return;
+        }
         const data = await response.json();
         setAlerts(data.alerts || []);
       } catch (err) {
