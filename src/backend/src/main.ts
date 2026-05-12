@@ -1027,7 +1027,7 @@ app.get('/api/trends/theme-evolution', async (req: Request, res: Response) => {
     const result = await pool.query(`
       SELECT
         DATE(ss.created_at) as date,
-        jsonb_array_elements(ss.themes) as theme,
+        unnest(ss.themes) as theme,
         AVG(ss.sentiment_score) as sentiment
       FROM sentiment_scores ss
       WHERE ss.entity_id = $1
