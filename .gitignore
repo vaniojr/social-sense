@@ -66,6 +66,12 @@ temp/
 *.sqlite
 *.db
 
+# Local database backups
+backups/
+
+# Git hooks local helper
+.githooks/.installed
+
 # Production builds
 /src/frontend/build
 /src/backend/dist

@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+if [[ "${SKIP_DB_BACKUP:-0}" == "1" ]]; then
+  echo "[pre-push] SKIP_DB_BACKUP=1 set, skipping backup."
+  exit 0
+fi
+
+echo "[pre-push] Running database backup before push..."
+bash "$ROOT_DIR/scripts/db-backup.sh"
+
+echo "[pre-push] Backup completed. Continuing push."

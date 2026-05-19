@@ -177,6 +177,21 @@ social-sense/
 7. Deploy automático (Vercel + Railway)
 ```
 
+## 🗄️ Banco de Dados (Migrations + Backup)
+
+```bash
+# Aplicar migrations versionadas
+cd src/backend
+npm run migrate
+
+# Voltar para raiz e habilitar hook (uma vez por clone)
+cd ../..
+bash scripts/setup-git-hooks.sh
+
+# Sync com backup automático antes do push
+bash scripts/git-sync.sh "chore: sync"
+```
+
 ## 📞 Próximos Passos
 
 1. **Ler documentação:** [docs/INDEX.md](docs/INDEX.md) (índice completo)

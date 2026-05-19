@@ -8,6 +8,8 @@
     "dev": "node --loader ts-node/esm src/main.ts",
     "build": "tsc",
     "start": "node dist/main.js",
+    "migrate": "node --loader ts-node/esm src/scripts/run-migrations.ts",
+    "migrate:prod": "npm run migrate",
     "lint": "eslint src --ext ts",
     "type-check": "tsc --noEmit",
     "test": "jest --passWithNoTests",
