@@ -21,6 +21,14 @@ import {
 
 dotenv.config();
 
+const databaseUrl =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
+
+const connectionUsesSsl = databaseUrl && !databaseUrl.includes('localhost');
+
 // Initialize Claude API client
 const anthropic = new Anthropic({ apiKey: process.env.CLAUDE_API_KEY });
 
@@ -28,19 +36,31 @@ const app: Express = express();
 const PORT = process.env.PORT || 5000;
 
 // Database connection pool
-const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || 'postgres',
-  database: process.env.DB_NAME || 'socialsense',
-});
+const pool = databaseUrl
+  ? new Pool({
+      connectionString: databaseUrl,
+      ssl: connectionUsesSsl ? { rejectUnauthorized: false } : false,
+    })
+  : new Pool({
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5432'),
+      user: process.env.DB_USER || 'postgres',
+      password: process.env.DB_PASSWORD || 'postgres',
+      database: process.env.DB_NAME || 'socialsense',
+    });
+
+const corsOrigins = (process.env.CORS_ORIGIN || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
 
 // Middleware
 app.use(cors({
   origin: [
     'http://localhost:3000',
     process.env.FRONTEND_URL || 'http://localhost:3000',
+    ...(process.env.VERCEL_URL ? [`https://${process.env.VERCEL_URL}`] : []),
+    ...corsOrigins,
   ],
   credentials: true,
 }));
