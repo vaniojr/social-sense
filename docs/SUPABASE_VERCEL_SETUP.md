@@ -55,3 +55,48 @@ Use Docker PostgreSQL locally (`DB_HOST/DB_PORT/DB_USER/DB_PASSWORD/DB_NAME`) an
 - Keep `.env` files out of git.
 - Never expose `SUPABASE_SERVICE_ROLE_KEY` in frontend variables.
 - Rotate keys immediately if they were ever shared in chat, logs, or screenshots.
+
+---
+
+## 5. Serverless Backend (Vercel Functions)
+
+The backend was refactored to run as Vercel Functions inside `src/backend/api/`:
+
+| File | Routes |
+|---|---|
+| `api/health.ts` | `GET /api/health` |
+| `api/entities.ts` | `GET /api/entities`, `GET /api/entities/:id`, `POST /api/entities` |
+| `api/competitor-groups.ts` | `GET/POST /api/competitor-groups`, `GET/PUT/DELETE /api/competitor-groups/:id`, `POST/DELETE /api/competitor-groups/:id/members[/:entityId]` |
+| `api/trends.ts` | `GET /api/trends/timeline`, `GET /api/trends/anomalies`, `GET /api/trends/theme-evolution` |
+| `api/index.ts` | Router — delegates to handlers above |
+
+### Each handler:
+- Creates a new `pg.Pool` per request (serverless-safe, closes after response).
+- Uses `DATABASE_URL` (with SSL) in production or `DB_*` vars locally.
+- Returns proper HTTP status codes and JSON error messages.
+
+### Vercel project config
+
+Make sure `vercel.json` has:
+```json
+{
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/src/backend/api/index.ts" }
+  ]
+}
+```
+
+And set all required environment variables in the Vercel dashboard (Settings → Environment Variables).
+
+### Testing locally (without Vercel CLI)
+
+Run tests automatically:
+```bash
+cd src/backend && npm test
+```
+
+Or start the Express backend (legacy) for manual curl tests:
+```bash
+cd src/backend && npm run dev
+# Then: curl http://localhost:5001/api/health
+```
