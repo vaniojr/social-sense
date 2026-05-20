@@ -1,0 +1,20 @@
+[
+  { "key": "DATABASE_URL", "value": "postgresql://user:pass@host:port/db?sslmode=require", "target": ["production", "preview", "development"] },
+  { "key": "CLAUDE_API_KEY", "value": "sk-ant-...", "target": ["production", "preview", "development"] },
+  { "key": "NEWSAPI_KEY", "value": "...", "target": ["production", "preview", "development"] },
+  { "key": "CORS_ORIGIN", "value": "https://socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "FRONTEND_URL", "value": "https://socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "SENTRY_DSN", "value": "...", "target": ["production", "preview", "development"] },
+  { "key": "SMTP_HOST", "value": "smtp.zoho.com", "target": ["production", "preview", "development"] },
+  { "key": "SMTP_PORT", "value": "465", "target": ["production", "preview", "development"] },
+  { "key": "SMTP_USER", "value": "hello@socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "SMTP_PASSWORD", "value": "...", "target": ["production", "preview", "development"] },
+  { "key": "SMTP_FROM", "value": "hello@socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "DOMAIN", "value": "socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "EMAIL", "value": "hello@socialsense.io", "target": ["production", "preview", "development"] },
+  { "key": "JWT_SECRET", "value": "uma-senha-forte", "target": ["production", "preview", "development"] },
+  { "key": "LOG_LEVEL", "value": "info", "target": ["production", "preview", "development"] },
+  { "key": "ENABLE_GEOGRAPHIC_ANALYSIS", "value": "true", "target": ["production", "preview", "development"] },
+  { "key": "ENABLE_CHAT_COPILOT", "value": "true", "target": ["production", "preview", "development"] },
+  { "key": "ENABLE_NEWS_AGGREGATION", "value": "true", "target": ["production", "preview", "development"] }
+]
